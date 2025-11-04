@@ -1,48 +1,19 @@
-# Product Name
+# Chain DualKey
 
 ## Overview
 
-### SKU:xxx
+### SKU:C147
 
-Description of the product
+Chain DualKey is a programmable dual-key input development board equipped with the ESP32-S3FN8 main control chip. The front integrates 2 hot-swappable blue switch mechanical keyboard keys and 2 programmable RGB LEDs, providing excellent interactive feedback. It has a built-in 350mAh lithium battery, combining with a low-power design for good battery life. The product comes with pre-installed Chain macro keyboard firmware, supports USB / BLE connections, and can emulate HID input devices. After the device is powered on, you can connect to the device's AP hotspot and configure the HID function mapping for the local device or expansion nodes via the built-in web page to achieve various control functions. This development board adopts the M5Stack Chain series expandable design, featuring two HY2.0-4P expansion ports that support lateral expansion and connection to other sensor devices. With the USB-OTG peripheral function built into ESP32-S3, it is suitable for smart home, keyboard peripherals, macro keyboards, and other scenarios.
 
 ## Related Link
 
-- [Document & Datasheet](https://docs.m5stack.com/en/unit/product_Link)
+- [Document & Datasheet](https://docs.m5stack.com/en/chain/Chain_DualKey)
 
 ## Required Libraries:
 
-- [Adafruit_BMP280_Library](https://github.com/adafruit/Required_Libraries_Link)
+- [M5Chain](https://github.com/m5stack/M5Chain)
 
 ## License
 
 - [Product Name- MIT](LICENSE)
-
-## Remaining steps(Editorial Staff Look,After following the steps, remember to delete all the content below)
-
-1. Change [clang format check path](./.github/workflows/clang-format-check.yml#L42-L47).
-2. Add License content to [LICENSE](/LICENSE).
-3. Change link on line 78 of [bug-report.yml](./.github/ISSUE_TEMPLATE/bug-report.yml#L79).
-
-```cpp
-Example
-# M5Unit-ENV
-
-## Overview
-
-### SKU:U001 & U001-B & U001-C
-
-Contains M5Stack-**UNIT ENV** series related case programs.ENV is an environmental sensor with integrated SHT30 and QMP6988 internally to detect temperature, humidity, and atmospheric pressure data.
-
-## Related Link
-
-- [Document & Datasheet](https://docs.m5stack.com/en/unit/envIII)
-
-## Required Libraries:
-
-- [Adafruit_BMP280_Library](https://github.com/adafruit/Adafruit_BMP280_Library)
-
-## License
-
-- [M5Unit-ENV - MIT](LICENSE)
-```

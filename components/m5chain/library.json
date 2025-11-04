@@ -1,0 +1,33 @@
+{
+  "name": "M5Chain",
+  "version": "1.0.0",
+  "description": "M5Chain modules library for various sensors and devices",
+  "keywords": [
+    "M5Stack",
+    "Chain",
+    "Sensor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YourUserName/M5Chain"
+  },
+  "authors": [
+    {
+      "name": "Your Name",
+      "email": "you@example.com",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": "*",
+  "build": {
+    "srcFilter": [
+      "+<*>"
+    ],
+    "flags": "-Isrc/Chain -Isrc/ChainAngle -Isrc/ChainCommon -Isrc/ChainEncoder -Isrc/ChainJoystick -Isrc/ChainKey -Isrc/ChainMIC -Isrc/ChainPIR -Isrc/ChainSwitch -Isrc/ChainToF -Isrc/ChainUart -Isrc/ChainPedal -Isrc/ChainBuzzer"
+  },
+  "headers": [
+    "M5Chain.h"
+  ]
+}

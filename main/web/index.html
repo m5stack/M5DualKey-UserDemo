@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DualKey 控制面板</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 data-i18n="title">DualKey 控制面板</h1>
+            <div class="header-controls">
+                <div class="language-switch">
+                    <button id="languageToggle" class="lang-btn">
+                        <span class="lang-text">EN</span>
+                        <span class="lang-icon">🌐</span>
+                    </button>
+                </div>
+                <div class="header-status">
+                    <div class="websocket-status">
+                        <span class="status-label" data-i18n="connectionStatus">连接状态:</span>
+                        <span class="status-dot online"></span>
+                        <span class="status-text" id="ws-status" data-i18n="online">在线</span>
+                    </div>
+                    <div class="last-update-status">
+                        <span class="status-label" data-i18n="lastUpdate">最后更新:</span>
+                        <span class="update-time" id="lastUpdate">--:--:--</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- DualKey 自身属性 -->
+            <section class="dualkey-section">
+                <h2 data-i18n="dualkeyProperties">DualKey 属性</h2>
+                <div class="dualkey-grid">
+                    <!-- 基础信息 -->
+                    <div class="card key-status">
+                        <h3 data-i18n="basicInfo">基础信息</h3>
+                        <div class="key-container">
+                            <div class="key left-key">
+                                <div class="key-indicator active"></div>
+                                <span data-i18n="leftKey">左键</span>
+                            </div>
+                            <div class="key right-key">
+                                <div class="key-indicator"></div>
+                                <span data-i18n="rightKey">右键</span>
+                            </div>
+                        </div>
+                        
+                        <!-- RGB控制 -->
+                        <div class="rgb-picker">
+                            <div class="color-input">
+                                <label data-i18n="leftKeyColor">左键颜色</label>
+                                <input type="color" id="leftKeyColor" value="#ff0000">
+                            </div>
+                            <div class="color-input">
+                                <label data-i18n="rightKeyColor">右键颜色</label>
+                                <input type="color" id="rightKeyColor" value="#00ff00">
+                            </div>
+                        </div>
+                        
+                        <!-- 拨码开关位置 -->
+                        <div class="dip-switch-section">
+                            <h4 data-i18n="dipSwitchPosition">拨码开关位置</h4>
+                            <div class="single-switch-container">
+                                <div class="single-switch">
+                                    <div class="dip-switch-slider"></div>
+                                </div>
+                                <div class="switch-labels">
+                                    <span class="switch-label left" data-i18n="left">左</span>
+                                    <span class="switch-label center" data-i18n="center">中</span>
+                                    <span class="switch-label right" data-i18n="right">右</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 电量信息 -->
+                        <div class="battery-section">
+                            <h4 data-i18n="batteryStatus">电量状态</h4>
+                            <div class="battery-container">
+                                <div class="battery-icon">
+                                    <div class="battery-level" style="width: 75%"></div>
+                                </div>
+                                <div class="battery-info">
+                                    <span class="battery-percentage">75%</span>
+                                    <span class="charging-status charging">充电中</span>
+                                </div>
+                            </div>
+                            <div class="voltage-info">
+                                <div class="voltage-item">
+                                    <span class="label" data-i18n="batteryVoltage">电池电压:</span>
+                                    <span class="value" id="batteryVoltage">3.7V</span>
+                                </div>
+                                <div class="voltage-item">
+                                    <span class="label" data-i18n="usbVoltage">USB电压:</span>
+                                    <span class="value" id="usbVoltage">5.0V</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HID设备状态 -->
+                    <div class="card hid-status">
+                        <h3 data-i18n="hidDeviceStatus">HID 设备状态</h3>
+                        <div class="status-item">
+                            <span class="label" data-i18n="usbConnection">USB连接:</span>
+                            <span class="value" id="usbConnectionStatus" data-i18n="connected">已连接</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label" data-i18n="bluetoothConnection">蓝牙连接:</span>
+                            <span class="value" id="bleConnectionStatus" data-i18n="notConnected">未连接</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label" data-i18n="deviceName">设备名称:</span>
+                            <span class="value" id="deviceName">Chain DualKey</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label" data-i18n="deviceType">设备类型:</span>
+                            <span class="value" id="deviceType">HID Keyboard</span>
+                        </div>
+                        <div class="hid-mapping-control">
+                            <span class="label" data-i18n="keyMapping">按键映射:</span>
+                            <select id="hidMappingSelect" class="mapping-select">
+                                <option value="0" data-i18n="copyPaste">复制粘贴 (Ctrl+C/V)</option>
+                                <option value="1" selected data-i18n="pageUpDown">翻页 (Page Up/Down)</option>
+                                <option value="2" data-i18n="volumeControl">音量控制 (Vol+/-)</option>
+                                <option value="3" data-i18n="mediaControl">媒体控制 (Prev/Next)</option>
+                            </select>
+                            <button class="btn btn-secondary" id="applyMappingBtn" data-i18n="apply">应用</button>
+                        </div>
+                        <div class="mapping-switches">
+                            <span class="label" data-i18n="mappingSwitch">映射开关:</span>
+                            <div class="switch-group">
+                                <div class="switch-item">
+                                    <label class="switch">
+                                        <input type="checkbox" id="usbMappingSwitch" checked>
+                                        <span class="switch-slider round"></span>
+                                    </label>
+                                    <span class="switch-label" data-i18n="usbMapping">USB映射</span>
+                                </div>
+                                <div class="switch-item">
+                                    <label class="switch">
+                                        <input type="checkbox" id="bleMappingSwitch" checked>
+                                        <span class="switch-slider round"></span>
+                                    </label>
+                                    <span class="switch-label" data-i18n="bluetoothMapping">蓝牙映射</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="current-mapping-status">
+                            <span class="label" data-i18n="currentMappingStatus">当前映射状态:</span>
+                            <div class="mapping-status-display">
+                                <div class="mapping-info">
+                                    <span class="mapping-name" id="currentMappingName" data-i18n="pageUpDown">翻页 (Page Up/Down)</span>
+                                    <div class="key-mapping-detail">
+                                        <span class="key-detail" id="usbMappingDetail" data-i18n="enabled">USB模式: 已启用</span>
+                                        <span class="key-detail" id="bleMappingDetail" data-i18n="enabled">蓝牙模式: 已启用</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ble-actions">
+                            <button class="btn btn-primary" id="bleToggleAdvBtn" data-i18n="startBroadcast">关闭广播</button>
+                            <button class="btn btn-secondary" id="blePairingBtn" disabled data-i18n-title="pairingTip" data-i18n="pairingMode">配对模式</button>
+                        </div>
+                    </div>
+
+
+
+                    <!-- WIFI信息 -->
+                    <div class="card battery-status">
+                        <h3 data-i18n="wifiInfo">WIFI信息</h3>
+                        <div class="wifi-info">
+                            <div class="wifi-item">
+                                <span class="label" data-i18n="ssid">SSID:</span>
+                                <span class="value" id="wifiSSID">--</span>
+                            </div>
+                            <div class="wifi-item">
+                                <span class="label" data-i18n="ipAddress">IP地址:</span>
+                                <span class="value" id="wifiIP">--</span>
+                            </div>
+                            <div class="wifi-item">
+                                <span class="label" data-i18n="signalStrength">信号强度:</span>
+                                <span class="value" id="wifiRSSI">--</span>
+                            </div>
+                            <div class="wifi-item">
+                                <span class="label" data-i18n="wifiStatus">连接状态:</span>
+                                <span class="value" id="wifiStatus" data-i18n="notConnected">未连接</span>
+                            </div>
+                        </div>
+                        
+                        <!-- WIFI配置 -->
+                        <div class="wifi-config">
+                            <h4 data-i18n="wifiConfig">WIFI配置(双键长按重置)</h4>
+                            <div class="wifi-config-form">
+                                <div class="form-group">
+                                    <label data-i18n="ssid">SSID:</label>
+                                    <input type="text" id="wifiConfigSSID" class="wifi-input" placeholder="输入WiFi名称">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="password">密码:</label>
+                                    <input type="password" id="wifiConfigPassword" class="wifi-input" placeholder="输入WiFi密码">
+                                </div>
+                                <div class="form-group">
+                                    <label class="switch">
+                                        <input type="checkbox" id="wifiStaticIPSwitch">
+                                        <span class="switch-slider round"></span>
+                                    </label>
+                                    <span class="switch-label" data-i18n="useStaticIP">使用静态IP</span>
+                                </div>
+                                <div id="wifiStaticIPConfig" class="static-ip-config" style="display: none;">
+                                    <div class="form-group">
+                                        <label data-i18n="ipAddress">IP地址:</label>
+                                        <input type="text" id="wifiStaticIP" class="wifi-input" placeholder="192.168.1.100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label data-i18n="subnetMask">子网掩码:</label>
+                                        <input type="text" id="wifiStaticNetmask" class="wifi-input" placeholder="255.255.255.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label data-i18n="gateway">网关:</label>
+                                        <input type="text" id="wifiStaticGateway" class="wifi-input" placeholder="192.168.1.1">
+                                    </div>
+                                </div>
+                                <div class="wifi-config-actions">
+                                    <button class="btn btn-primary" id="wifiConfigApplyBtn" data-i18n="applyConfig">应用配置</button>
+                                    <button class="btn btn-secondary" id="wifiConfigResetBtn" data-i18n="resetConfig">重置配置</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chain Bus 属性 -->
+            <section class="chainbus-section">
+                <h2 data-i18n="chainBusProperties">Chain Bus 属性</h2>
+                
+                <!-- Chain Bus 可视化 -->
+                <div class="chain-bus-visualization">
+                    <div class="bus-container" id="busVisualization">
+                        <!-- 左侧设备区域 -->
+                        <div class="bus-side left-bus-side" id="leftBusVisualization">
+                            <div class="bus-label" data-i18n="leftBus">左 Bus</div>
+                            <div class="bus-devices" id="leftBusDevicesVisual">
+                                <!-- 左侧设备将动态插入 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 中心 Chain DualKey -->
+                        <div class="central-device">
+                            <img src="Chain_DualKey.png" alt="Chain DualKey" class="central-device-image">
+                            <div class="device-label">Chain DualKey</div>
+                        </div>
+                        
+                        <!-- 右侧设备区域 -->
+                        <div class="bus-side right-bus-side" id="rightBusVisualization">
+                            <div class="bus-label" data-i18n="rightBus">右 Bus</div>
+                            <div class="bus-devices" id="rightBusDevicesVisual">
+                                <!-- 右侧设备将动态插入 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chainbus-grid">
+                    <!-- 左Bus状态 -->
+                    <div class="card bus-status left-bus">
+                        <h3 data-i18n="leftBus">左 Bus 状态</h3>
+                        <div class="bus-info">
+                            <div class="device-count">
+                                <span class="label" data-i18n="deviceCount">设备数量:</span>
+                                <span class="value" id="leftBusDeviceCount">0</span>
+                            </div>
+                            <div class="refresh-time">
+                                <span class="label" data-i18n="refreshTime">刷新时间:</span>
+                                <span class="value" id="leftBusRefreshTime">--:--:--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 动态设备列表 -->
+                        <div class="device-list">
+                            <h4 data-i18n="deviceList">设备列表</h4>
+                            <div class="device-container" id="leftBusDevices">
+                                <!-- 设备卡片将动态插入 -->
+                            </div>
+                        </div>
+                        
+                        <div class="bus-rgb">
+                            <label data-i18n="busRGB">总线RGB:</label>
+                            <input type="color" class="bus-color-picker" id="leftBusColorPicker" value="#000000">
+                            <button class="btn btn-secondary bus-rgb-btn" id="leftBusRgbBtn" data-i18n="set">设置</button>
+                        </div>
+                        
+                        <div class="bus-enumerate">
+                            <button class="btn btn-primary" id="enumerateLeftBus" data-i18n="refreshBusEnumeration">刷新BUS枚举设备</button>
+                        </div>
+                    </div>
+
+                    <!-- 右Bus状态 -->
+                    <div class="card bus-status right-bus">
+                        <h3 data-i18n="rightBus">右 Bus 状态</h3>
+                        <div class="bus-info">
+                            <div class="device-count">
+                                <span class="label" data-i18n="deviceCount">设备数量:</span>
+                                <span class="value" id="rightBusDeviceCount">0</span>
+                            </div>
+                            <div class="refresh-time">
+                                <span class="label" data-i18n="refreshTime">刷新时间:</span>
+                                <span class="value" id="rightBusRefreshTime">--:--:--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 动态设备列表 -->
+                        <div class="device-list">
+                            <h4 data-i18n="deviceList">设备列表</h4>
+                            <div class="device-container" id="rightBusDevices">
+                                <!-- 设备卡片将动态插入 -->
+                            </div>
+                        </div>
+                        
+                        <div class="bus-rgb">
+                            <label data-i18n="busRGB">总线RGB:</label>
+                            <input type="color" class="bus-color-picker" id="rightBusColorPicker" value="#000000">
+                            <button class="btn btn-secondary bus-rgb-btn" id="rightBusRgbBtn" data-i18n="set">设置</button>
+                        </div>
+                        
+                        <div class="bus-enumerate">
+                            <button class="btn btn-primary" id="enumerateRightBus" data-i18n="refreshBusEnumeration">刷新BUS枚举设备</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

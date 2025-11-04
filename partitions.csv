@@ -1,0 +1,7 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+esp_secure_cert,  0x3F,          ,    0xD000,     0x2000, encrypted
+nvs_key,  data, nvs_keys, 0xF000, 0x1000, encrypted
+nvs,      data, nvs,     0x10000,   0x6000,
+phy_init, data, phy,     0x16000,   0x1000,
+factory,  app,  factory, 0x20000,   0x380000,
+fctry,    data, nvs,     0x3A0000,  0x6000       
