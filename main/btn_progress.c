@@ -134,12 +134,12 @@ void btn_progress(keyboard_btn_report_t kbd_report)
                 break;
 
             case KC_MEDIA_PREV_TRACK:
-                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_SCAN_PREVIOUS_TRACK;
+                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_SCAN_PREVIOUS;
                 if_consumer_report                      = true;
                 break;
 
             case KC_MEDIA_NEXT_TRACK:
-                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_SCAN_NEXT_TRACK;
+                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_SCAN_NEXT;
                 if_consumer_report                      = true;
                 break;
 

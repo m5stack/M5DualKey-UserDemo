@@ -272,10 +272,10 @@ esp_err_t chain_bus_hid_trigger_function(hid_func_type_t func_type, hid_func_par
             ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_PLAY_PAUSE);
             break;
         case HID_FUNC_MEDIA_NEXT:
-            ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_SCAN_NEXT_TRACK);
+            ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_SCAN_NEXT);
             break;
         case HID_FUNC_MEDIA_PREV:
-            ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_SCAN_PREVIOUS_TRACK);
+            ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_SCAN_PREVIOUS);
             break;
         case HID_FUNC_MEDIA_STOP:
             ret = send_consumer_key_with_release(HID_USAGE_CONSUMER_STOP);
