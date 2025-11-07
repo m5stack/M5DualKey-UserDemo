@@ -32,38 +32,38 @@
  * Auto ProductID layout's Bitmap:
  *   [MSB]  VIDEO | AUDIO | MIDI | HID | MSC | CDC          [LSB]
  */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
+#define _PID_MAP(itf, n) ((CFG_TUD_##itf) << (n))
 #ifndef USB_PID
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-    _PID_MAP(MIDI, 3) | _PID_MAP(AUDIO, 4) | _PID_MAP(VIDEO, 5) | _PID_MAP(VENDOR, 6) )
+#define USB_PID                                                                                                 \
+    (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | _PID_MAP(MIDI, 3) | _PID_MAP(AUDIO, 4) | \
+     _PID_MAP(VIDEO, 5) | _PID_MAP(VENDOR, 6))
 #endif
 
 //--------------------------------------------------------------------+
 // Device Descriptors
 //--------------------------------------------------------------------+
 tusb_desc_device_t const desc_device = {
-    .bLength            = sizeof(tusb_desc_device_t),
-    .bDescriptorType    = TUSB_DESC_DEVICE,
-    .bcdUSB             = 0x0200,
+    .bLength         = sizeof(tusb_desc_device_t),
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB          = 0x0200,
 
     // Use Interface Association Descriptor (IAD) for Video
     // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
-    .bDeviceClass       = TUSB_CLASS_MISC,
-    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
-    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
+    .bDeviceClass    = TUSB_CLASS_MISC,
+    .bDeviceSubClass = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol = MISC_PROTOCOL_IAD,
 
-    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
+    .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
 
-    .idVendor           = USB_VID,
-    .idProduct          = USB_PID,
-    .bcdDevice          = 0x0100,
+    .idVendor  = USB_VID,
+    .idProduct = USB_PID,
+    .bcdDevice = 0x0100,
 
-    .iManufacturer      = 0x01,
-    .iProduct           = 0x02,
-    .iSerialNumber      = 0x03,
+    .iManufacturer = 0x01,
+    .iProduct      = 0x02,
+    .iSerialNumber = 0x03,
 
-    .bNumConfigurations = 0x01
-};
+    .bNumConfigurations = 0x01};
 
 uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(REPORT_ID_KEYBOARD)),
@@ -75,9 +75,9 @@ uint8_t const desc_hid_report[] = {
 
 const uint16_t desc_hid_report_len = sizeof(desc_hid_report);
 
-uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
+uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 {
-    (void) instance;
+    (void)instance;
     return desc_hid_report;
 }
 
@@ -85,31 +85,31 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
 // Application return pointer to descriptor
 uint8_t const *tud_descriptor_device_cb(void)
 {
-    return (uint8_t const *) &desc_device;
+    return (uint8_t const *)&desc_device;
 }
 
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN * CFG_TUD_HID + TUD_CDC_DESC_LEN * CFG_TUD_CDC)
+#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN * CFG_TUD_HID + TUD_CDC_DESC_LEN * CFG_TUD_CDC)
 
 uint8_t const desc_fs_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
-    
+
     // CDC: Interface number, string index, EP notification address and size, EP data address (out, in) and size.
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_CTRL, 5, 0x80 | EPNUM_CDC_CMD, 8, EPNUM_CDC_OUT, 0x80 | EPNUM_CDC_IN, 64),
-    
+
     // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(ITF_NUM_HID, 4, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), CFG_TUD_HID_EP_BUFSIZE, 1)
-};
+    TUD_HID_DESCRIPTOR(ITF_NUM_HID, 4, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA),
+                       CFG_TUD_HID_EP_BUFSIZE, 1)};
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
 // Descriptor contents must exist long enough for transfer to complete
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
-    (void) index; // for multiple configurations
+    (void)index;  // for multiple configurations
 
     return desc_fs_configuration;
 }
@@ -119,12 +119,12 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 //--------------------------------------------------------------------+
 
 // array of pointer to string descriptors
-char const *string_desc_arr [] = {
-    (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-    USB_MANUFACTURER,              // 1: Manufacturer
-    USB_PRODUCT,                   // 2: Product
-    "123456",                      // 3: Serials, should use chip ID
-    "Chain DualKey",                     // 4: HID Interface
+char const *string_desc_arr[] = {
+    (const char[]){0x09, 0x04},  // 0: is supported language is English (0x0409)
+    USB_MANUFACTURER,            // 1: Manufacturer
+    USB_PRODUCT,                 // 2: Product
+    "123456",                    // 3: Serials, should use chip ID
+    "Chain DualKey",             // 4: HID Interface
 };
 
 void set_string_desc_product(const char *product)
@@ -138,7 +138,7 @@ static uint16_t _desc_str[32];
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 {
-    (void) langid;
+    (void)langid;
 
     uint8_t chr_count;
 
@@ -156,7 +156,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
         const char *str = string_desc_arr[index];
 
         // Cap at max char
-        chr_count = (uint8_t) strlen(str);
+        chr_count = (uint8_t)strlen(str);
         if (chr_count > 31) {
             chr_count = 31;
         }

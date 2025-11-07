@@ -38,4 +38,4 @@ extern bool g_usb_connected;
 
 #ifdef __cplusplus
 }
-#endif 
+#endif

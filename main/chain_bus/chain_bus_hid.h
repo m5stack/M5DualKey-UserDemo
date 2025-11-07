@@ -13,66 +13,66 @@ extern "C" {
 
 // HID功能类型枚举
 typedef enum {
-    HID_FUNC_NONE = 0,          // 无功能
-    
+    HID_FUNC_NONE = 0,  // 无功能
+
     // 键盘功能类型
-    HID_FUNC_COPY,              // 复制 (Ctrl+C)
-    HID_FUNC_PASTE,             // 粘贴 (Ctrl+V)
-    HID_FUNC_CUT,               // 剪切 (Ctrl+X)
-    HID_FUNC_UNDO,              // 撤销 (Ctrl+Z)
-    HID_FUNC_REDO,              // 重做 (Ctrl+Y)
-    HID_FUNC_SELECT_ALL,        // 全选 (Ctrl+A)
-    HID_FUNC_DELETE,            // 删除 (Delete)
-    HID_FUNC_BACKSPACE,         // 退格 (Backspace)
-    HID_FUNC_ENTER,             // 回车 (Enter)
-    HID_FUNC_ESC,               // Esc
-    HID_FUNC_TAB,               // Tab
-    HID_FUNC_PAGE_UP,           // 上翻页
-    HID_FUNC_PAGE_DOWN,         // 下翻页
-    
+    HID_FUNC_COPY,        // 复制 (Ctrl+C)
+    HID_FUNC_PASTE,       // 粘贴 (Ctrl+V)
+    HID_FUNC_CUT,         // 剪切 (Ctrl+X)
+    HID_FUNC_UNDO,        // 撤销 (Ctrl+Z)
+    HID_FUNC_REDO,        // 重做 (Ctrl+Y)
+    HID_FUNC_SELECT_ALL,  // 全选 (Ctrl+A)
+    HID_FUNC_DELETE,      // 删除 (Delete)
+    HID_FUNC_BACKSPACE,   // 退格 (Backspace)
+    HID_FUNC_ENTER,       // 回车 (Enter)
+    HID_FUNC_ESC,         // Esc
+    HID_FUNC_TAB,         // Tab
+    HID_FUNC_PAGE_UP,     // 上翻页
+    HID_FUNC_PAGE_DOWN,   // 下翻页
+
     // 鼠标功能类型
-    HID_FUNC_MOUSE_BUTTON_LEFT_DOWN, // 鼠标左键按下
-    HID_FUNC_MOUSE_BUTTON_LEFT_UP,   // 鼠标左键释放
-    HID_FUNC_MOUSE_BUTTON_RIGHT_DOWN, // 鼠标右键按下
-    HID_FUNC_MOUSE_BUTTON_RIGHT_UP,   // 鼠标右键释放
-    HID_FUNC_MOUSE_MOVE,        // 鼠标移动
-    HID_FUNC_MOUSE_MOVE_LEFT,   // 鼠标向左移动
-    HID_FUNC_MOUSE_MOVE_RIGHT,  // 鼠标向右移动
-    HID_FUNC_MOUSE_MOVE_UP,     // 鼠标向上移动
-    HID_FUNC_MOUSE_MOVE_DOWN,   // 鼠标向下移动
-    HID_FUNC_MOUSE_SCROLL,      // 鼠标竖向滚轮
-    HID_FUNC_MOUSE_SCROLL_UP,   // 鼠标竖向滚轮向上
-    HID_FUNC_MOUSE_SCROLL_DOWN, // 鼠标竖向滚轮向下
-    HID_FUNC_MOUSE_PAN,         // 鼠标横向滚轮
-    HID_FUNC_MOUSE_PAN_LEFT,    // 鼠标横向滚轮向左
-    HID_FUNC_MOUSE_PAN_RIGHT,   // 鼠标横向滚轮向右
-    
+    HID_FUNC_MOUSE_BUTTON_LEFT_DOWN,   // 鼠标左键按下
+    HID_FUNC_MOUSE_BUTTON_LEFT_UP,     // 鼠标左键释放
+    HID_FUNC_MOUSE_BUTTON_RIGHT_DOWN,  // 鼠标右键按下
+    HID_FUNC_MOUSE_BUTTON_RIGHT_UP,    // 鼠标右键释放
+    HID_FUNC_MOUSE_MOVE,               // 鼠标移动
+    HID_FUNC_MOUSE_MOVE_LEFT,          // 鼠标向左移动
+    HID_FUNC_MOUSE_MOVE_RIGHT,         // 鼠标向右移动
+    HID_FUNC_MOUSE_MOVE_UP,            // 鼠标向上移动
+    HID_FUNC_MOUSE_MOVE_DOWN,          // 鼠标向下移动
+    HID_FUNC_MOUSE_SCROLL,             // 鼠标竖向滚轮
+    HID_FUNC_MOUSE_SCROLL_UP,          // 鼠标竖向滚轮向上
+    HID_FUNC_MOUSE_SCROLL_DOWN,        // 鼠标竖向滚轮向下
+    HID_FUNC_MOUSE_PAN,                // 鼠标横向滚轮
+    HID_FUNC_MOUSE_PAN_LEFT,           // 鼠标横向滚轮向左
+    HID_FUNC_MOUSE_PAN_RIGHT,          // 鼠标横向滚轮向右
+
     // 音量功能类型
-    HID_FUNC_VOLUME_UP,         // 音量增加
-    HID_FUNC_VOLUME_DOWN,       // 音量减少
-    HID_FUNC_VOLUME_MUTE,       // 静音切换
-    
+    HID_FUNC_VOLUME_UP,    // 音量增加
+    HID_FUNC_VOLUME_DOWN,  // 音量减少
+    HID_FUNC_VOLUME_MUTE,  // 静音切换
+
     // 媒体控制功能类型
     HID_FUNC_MEDIA_PLAY_PAUSE,  // 播放/暂停
     HID_FUNC_MEDIA_NEXT,        // 下一首
     HID_FUNC_MEDIA_PREV,        // 上一首
     HID_FUNC_MEDIA_STOP,        // 停止
-    
+
     HID_FUNC_MAX
 } hid_func_type_t;
 
 // HID功能参数结构
 typedef struct {
     uint8_t buttons; /**< buttons mask for currently pressed buttons in the mouse. */
-    int8_t  x;       /**< Current delta x movement of the mouse. */
-    int8_t  y;       /**< Current delta y movement on the mouse. */
-    int8_t  wheel;   /**< Current delta wheel movement on the mouse. */
-    int8_t  pan;     // using AC Pan
+    int8_t x;        /**< Current delta x movement of the mouse. */
+    int8_t y;        /**< Current delta y movement on the mouse. */
+    int8_t wheel;    /**< Current delta wheel movement on the mouse. */
+    int8_t pan;      // using AC Pan
 } mouse_report_t;
 
 typedef struct {
-    mouse_report_t mouse_value;// 鼠标移动量
-    uint8_t volume_level;       // 音量等级 (0-100)
+    mouse_report_t mouse_value;  // 鼠标移动量
+    uint8_t volume_level;        // 音量等级 (0-100)
 } hid_func_params_t;
 
 // HID功能描述表（类似keymap.h的形式）

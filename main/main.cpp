@@ -60,49 +60,48 @@ extern const char chain_mount_jpg_start[] asm("_binary_Chain_Mount_jpg_start");
 extern const char chain_mount_jpg_end[] asm("_binary_Chain_Mount_jpg_end");
 extern const char chain_tof_jpg_start[] asm("_binary_Chain_ToF_jpg_start");
 extern const char chain_tof_jpg_end[] asm("_binary_Chain_ToF_jpg_end");
-
 }
 
 static const char *TAG = "main";
 
 // WiFi配置
-#define AP_SSID "DualKey_AP"
-#define AP_PASSWORD "12345678"
+#define AP_SSID       "DualKey_AP"
+#define AP_PASSWORD   "12345678"
 #define MAXIMUM_RETRY 5
 
 // WiFi配置数据结构
 typedef struct {
-    char ssid[32];              // SSID
-    char password[64];          // 密码
-    bool use_static_ip;         // 是否使用静态IP
-    char static_ip[16];         // 静态IP地址
-    char netmask[16];           // 子网掩码
-    char gateway[16];           // 网关
-    uint32_t crc32;             // CRC校验
+    char ssid[32];       // SSID
+    char password[64];   // 密码
+    bool use_static_ip;  // 是否使用静态IP
+    char static_ip[16];  // 静态IP地址
+    char netmask[16];    // 子网掩码
+    char gateway[16];    // 网关
+    uint32_t crc32;      // CRC校验
 } wifi_config_saved_t;
 
-static keyboard_btn_handle_t kbd_handle = NULL;
+static keyboard_btn_handle_t kbd_handle        = NULL;
 static TaskHandle_t light_progress_task_handle = NULL;
-static led_strip_handle_t led_strip = NULL;
-uint64_t last_time = 0;
-sys_param_t* sys_param;
+static led_strip_handle_t led_strip            = NULL;
+uint64_t last_time                             = 0;
+sys_param_t *sys_param;
 
 // WiFi相关变量
-static int s_retry_num = 0;
+static int s_retry_num       = 0;
 static httpd_handle_t server = NULL;
-static bool wifi_connected = false;
+static bool wifi_connected   = false;
 
 // WebSocket相关变量
-static int websocket_fd = -1;
+static int websocket_fd                   = -1;
 static TaskHandle_t websocket_task_handle = NULL;
-QueueHandle_t status_refresh_queue = NULL; // 状态刷新消息队列
-static bool send_bus_all_data = false;
+QueueHandle_t status_refresh_queue        = NULL;  // 状态刷新消息队列
+static bool send_bus_all_data             = false;
 
-int switch_pos = 0; // 0:center, 1:left, 2:right
+int switch_pos             = 0;  // 0:center, 1:left, 2:right
 bool g_usb_mapping_enabled = true;
 bool g_ble_mapping_enabled = false;
-uint8_t g_connect_status = 0; // 0:未连接, 1:连接中, 2:已连接
-bool g_ble_adv_status = false; // 蓝牙广播状态: false=未广播, true=正在广播
+uint8_t g_connect_status   = 0;      // 0:未连接, 1:连接中, 2:已连接
+bool g_ble_adv_status      = false;  // 蓝牙广播状态: false=未广播, true=正在广播
 
 // 状态刷新消息类型
 typedef enum {
@@ -112,12 +111,12 @@ typedef enum {
 
 // DualKey配置数据结构
 typedef struct {
-    uint32_t left_key_color;     // 左键颜色
-    uint32_t right_key_color;    // 右键颜色
-    int current_key_mapping;     // 当前按键映射索引
-    bool usb_mapping_enabled;    // USB映射开关
-    bool ble_mapping_enabled;    // 蓝牙映射开关
-    uint32_t crc32;             // CRC校验
+    uint32_t left_key_color;   // 左键颜色
+    uint32_t right_key_color;  // 右键颜色
+    int current_key_mapping;   // 当前按键映射索引
+    bool usb_mapping_enabled;  // USB映射开关
+    bool ble_mapping_enabled;  // 蓝牙映射开关
+    uint32_t crc32;            // CRC校验
 } dualkey_saved_config_t;
 
 // 状态数据结构
@@ -127,50 +126,47 @@ typedef struct {
     uint32_t left_key_color;
     uint32_t right_key_color;
     bool usb_connected;
-    int usb_mode; // 0:HID, 1:BLE, 2:CDC
-    int dip_switch_pos; // 0:center, 1:left, 2:right
+    int usb_mode;        // 0:HID, 1:BLE, 2:CDC
+    int dip_switch_pos;  // 0:center, 1:left, 2:right
     float battery_voltage;
     int charge_status;  // 0:未充电, 1:充电中, 2:充满
     int battery_percentage;
     // 蓝牙状态
     bool bluetooth_connected;
     char bluetooth_device_name[32];
-    int bluetooth_pairing_status; // 0:未配对, 1:配对中, 2:已配对
-    bool bluetooth_adv_status; // 蓝牙广播状态: false=未广播, true=正在广播
+    int bluetooth_pairing_status;  // 0:未配对, 1:配对中, 2:已配对
+    bool bluetooth_adv_status;     // 蓝牙广播状态: false=未广播, true=正在广播
     // HID按键映射
-    int current_key_mapping; // 当前按键映射索引
+    int current_key_mapping;  // 当前按键映射索引
     // WIFI状态
-    char wifi_ssid[32];      // WiFi网络名称
-    char wifi_ip[16];        // IP地址
-    int wifi_rssi;          // 信号强度
-    bool wifi_connected;     // 连接状态
+    char wifi_ssid[32];   // WiFi网络名称
+    char wifi_ip[16];     // IP地址
+    int wifi_rssi;        // 信号强度
+    bool wifi_connected;  // 连接状态
 } device_status_t;
 
-device_status_t g_device_status = {
-    .left_key_pressed = false,
-    .right_key_pressed = false,
-    .left_key_color = 0x000000,  // 红色
-    .right_key_color = 0x000000, // 绿色
-    .usb_connected = true,
-    .usb_mode = 0, // HID
-    .dip_switch_pos = 0, // center
-    .battery_voltage = 3.7f,
-    .charge_status = 0,
-    .battery_percentage = 75,
-    // 蓝牙状态初始化
-    .bluetooth_connected = false,
-    .bluetooth_device_name = USB_HID_PRODUCT,
-    .bluetooth_pairing_status = 0, // 未配对
-    .bluetooth_adv_status = false, // 未广播
-    // HID按键映射初始化
-    .current_key_mapping = 1, // 默认为翻页模式
-    // WIFI状态初始化
-    .wifi_ssid = "",
-    .wifi_ip = "",
-    .wifi_rssi = 0,
-    .wifi_connected = false
-};
-
+device_status_t g_device_status = {.left_key_pressed   = false,
+                                   .right_key_pressed  = false,
+                                   .left_key_color     = 0x000000,  // 红色
+                                   .right_key_color    = 0x000000,  // 绿色
+                                   .usb_connected      = true,
+                                   .usb_mode           = 0,  // HID
+                                   .dip_switch_pos     = 0,  // center
+                                   .battery_voltage    = 3.7f,
+                                   .charge_status      = 0,
+                                   .battery_percentage = 75,
+                                   // 蓝牙状态初始化
+                                   .bluetooth_connected      = false,
+                                   .bluetooth_device_name    = USB_HID_PRODUCT,
+                                   .bluetooth_pairing_status = 0,      // 未配对
+                                   .bluetooth_adv_status     = false,  // 未广播
+                                   // HID按键映射初始化
+                                   .current_key_mapping = 1,  // 默认为翻页模式
+                                   // WIFI状态初始化
+                                   .wifi_ssid      = "",
+                                   .wifi_ip        = "",
+                                   .wifi_rssi      = 0,
+                                   .wifi_connected = false};
 
 static void wifi_start_ap_mode(void);
 static httpd_handle_t start_webserver(void);
@@ -187,17 +183,16 @@ static void set_key_rgb_color(int key_index, uint32_t rgb_color);
 // DualKey配置保存和加载函数声明
 static esp_err_t dualkey_config_save(void);
 static esp_err_t dualkey_config_load(void);
-static uint32_t dualkey_config_calculate_crc(const dualkey_saved_config_t* config);
+static uint32_t dualkey_config_calculate_crc(const dualkey_saved_config_t *config);
 
 // WiFi配置保存和加载函数声明
-static esp_err_t wifi_config_save(const wifi_config_saved_t* config);
-static esp_err_t wifi_config_load(wifi_config_saved_t* config);
+static esp_err_t wifi_config_save(const wifi_config_saved_t *config);
+static esp_err_t wifi_config_load(wifi_config_saved_t *config);
 static esp_err_t wifi_config_reset(void);
-static uint32_t wifi_config_calculate_crc(const wifi_config_saved_t* config);
+static uint32_t wifi_config_calculate_crc(const wifi_config_saved_t *config);
 
 // WiFi事件处理
-static void wifi_event_handler(void *arg, esp_event_base_t event_base,
-                               int32_t event_id, void *event_data)
+static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
@@ -217,17 +212,15 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
+        s_retry_num    = 0;
         wifi_connected = true;
         start_webserver();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
-        ESP_LOGI(TAG, "station " MACSTR " join, AID=%d",
-                 MAC2STR(event->mac), event->aid);
+        ESP_LOGI(TAG, "station " MACSTR " join, AID=%d", MAC2STR(event->mac), event->aid);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
-        ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d, reason=%d",
-                 MAC2STR(event->mac), event->aid, event->reason);
+        ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d, reason=%d", MAC2STR(event->mac), event->aid, event->reason);
     }
 }
 
@@ -235,25 +228,25 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 static void wifi_start_ap_mode(void)
 {
     ESP_LOGI(TAG, "Starting AP mode");
-    
+
     wifi_config_t wifi_config = {};
-    strcpy((char*)wifi_config.ap.ssid, AP_SSID);
+    strcpy((char *)wifi_config.ap.ssid, AP_SSID);
     wifi_config.ap.ssid_len = strlen(AP_SSID);
-    strcpy((char*)wifi_config.ap.password, AP_PASSWORD);
+    strcpy((char *)wifi_config.ap.password, AP_PASSWORD);
     wifi_config.ap.max_connection = 4;
-    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
-    
+    wifi_config.ap.authmode       = WIFI_AUTH_WPA_WPA2_PSK;
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    
+
     esp_netif_ip_info_t ip_info;
     esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ip_info);
-    
+
     char ip_addr[16];
     inet_ntoa_r(ip_info.ip.addr, ip_addr, 16);
     ESP_LOGI(TAG, "AP started with IP: %s", ip_addr);
-    
+
     start_webserver();
 }
 
@@ -264,54 +257,47 @@ static void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
     esp_netif_create_default_wifi_ap();
-    
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                       ESP_EVENT_ANY_ID,
-                                                       &wifi_event_handler,
-                                                       NULL,
-                                                       NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                       IP_EVENT_STA_GOT_IP,
-                                                       &wifi_event_handler,
-                                                       NULL,
-                                                       NULL));
-    
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+
     // 从flash加载WiFi配置
     wifi_config_saved_t saved_config;
     esp_err_t ret = wifi_config_load(&saved_config);
-    
+
     if (ret == ESP_OK && strlen(saved_config.ssid) > 0) {
         // 有保存的配置，尝试连接
         ESP_LOGI(TAG, "Found saved WiFi config, SSID: %s", saved_config.ssid);
-        
+
         // 配置静态IP（如果启用）
         if (saved_config.use_static_ip) {
             ESP_LOGI(TAG, "Using static IP: %s", saved_config.static_ip);
             esp_netif_dhcpc_stop(sta_netif);
-            
+
             esp_netif_ip_info_t ip_info;
             memset(&ip_info, 0, sizeof(esp_netif_ip_info_t));
-            ip_info.ip.addr = esp_ip4addr_aton(saved_config.static_ip);
+            ip_info.ip.addr      = esp_ip4addr_aton(saved_config.static_ip);
             ip_info.netmask.addr = esp_ip4addr_aton(saved_config.netmask);
-            ip_info.gw.addr = esp_ip4addr_aton(saved_config.gateway);
-            
+            ip_info.gw.addr      = esp_ip4addr_aton(saved_config.gateway);
+
             esp_netif_set_ip_info(sta_netif, &ip_info);
         }
-        
+
         wifi_config_t wifi_config = {};
-        strcpy((char*)wifi_config.sta.ssid, saved_config.ssid);
-        strcpy((char*)wifi_config.sta.password, saved_config.password);
+        strcpy((char *)wifi_config.sta.ssid, saved_config.ssid);
+        strcpy((char *)wifi_config.sta.password, saved_config.password);
         wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-        wifi_config.sta.pmf_cfg.capable = true;
-        wifi_config.sta.pmf_cfg.required = false;
-        
+        wifi_config.sta.pmf_cfg.capable    = true;
+        wifi_config.sta.pmf_cfg.required   = false;
+
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
         ESP_ERROR_CHECK(esp_wifi_start());
-        
+
         ESP_LOGI(TAG, "wifi_init_sta finished, connecting to %s", saved_config.ssid);
     } else {
         // 没有保存的配置，直接启动AP模式
@@ -452,8 +438,7 @@ static esp_err_t chain_tof_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-
-// HTTP GET处理器 - Chain 
+// HTTP GET处理器 - Chain
 
 // WebSocket处理器
 static esp_err_t websocket_handler(httpd_req_t *req)
@@ -476,22 +461,22 @@ static esp_err_t websocket_handler(httpd_req_t *req)
     }
 
     if (ws_pkt.len) {
-        buf = (uint8_t*)malloc(ws_pkt.len + 1);
+        buf = (uint8_t *)malloc(ws_pkt.len + 1);
         if (buf == NULL) {
             ESP_LOGE(TAG, "Failed to allocate memory for buf");
             return ESP_ERR_NO_MEM;
         }
         ws_pkt.payload = buf;
-        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+        ret            = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
             free(buf);
             return ret;
         }
         buf[ws_pkt.len] = '\0';
-        
+
         // 处理接收到的JSON数据
-        cJSON *json = cJSON_Parse((char*)buf);
+        cJSON *json = cJSON_Parse((char *)buf);
         if (json) {
             cJSON *type = cJSON_GetObjectItem(json, "type");
             if (type && cJSON_IsString(type)) {
@@ -501,20 +486,20 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                         rgb_matrix_set_suspend_state(true);
                         vTaskDelay(1 / portTICK_PERIOD_MS);
                     }
-                    cJSON *key = cJSON_GetObjectItem(json, "key");
+                    cJSON *key   = cJSON_GetObjectItem(json, "key");
                     cJSON *color = cJSON_GetObjectItem(json, "color");
                     if (key && color && cJSON_IsString(key) && cJSON_IsNumber(color)) {
                         uint32_t rgb_color = (uint32_t)color->valueint;
                         if (strcmp(key->valuestring, "left") == 0) {
                             g_device_status.left_key_color = rgb_color;
                             ESP_LOGI(TAG, "设置左键颜色: 0x%06lX", rgb_color);
-                            set_key_rgb_color(1, rgb_color); // 左键 LED index 1
+                            set_key_rgb_color(1, rgb_color);  // 左键 LED index 1
                             // 自动保存配置
                             dualkey_config_save();
                         } else if (strcmp(key->valuestring, "right") == 0) {
                             g_device_status.right_key_color = rgb_color;
                             ESP_LOGI(TAG, "设置右键颜色: 0x%06lX", rgb_color);
-                            set_key_rgb_color(0, rgb_color); // 右键 LED index 0
+                            set_key_rgb_color(0, rgb_color);  // 右键 LED index 0
                             // 自动保存配置
                             dualkey_config_save();
                         }
@@ -535,19 +520,18 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     }
                 } else if (strcmp(type->valuestring, "set_chain_rgb") == 0) {
                     // 设置Chain设备RGB颜色
-                    cJSON *bus = cJSON_GetObjectItem(json, "bus");
+                    cJSON *bus       = cJSON_GetObjectItem(json, "bus");
                     cJSON *device_id = cJSON_GetObjectItem(json, "device_id");
-                    cJSON *color = cJSON_GetObjectItem(json, "color");
-                    
-                    if (bus && device_id && color && 
-                        cJSON_IsString(bus) && cJSON_IsNumber(device_id) && cJSON_IsNumber(color)) {
-                        int bus_idx = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
-                        uint8_t dev_id = (uint8_t)device_id->valueint;
+                    cJSON *color     = cJSON_GetObjectItem(json, "color");
+
+                    if (bus && device_id && color && cJSON_IsString(bus) && cJSON_IsNumber(device_id) &&
+                        cJSON_IsNumber(color)) {
+                        int bus_idx        = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
+                        uint8_t dev_id     = (uint8_t)device_id->valueint;
                         uint32_t rgb_color = (uint32_t)color->valueint;
-                        
-                        ESP_LOGI(TAG, "设置 %s Bus 设备 %d RGB颜色: 0x%06lX", 
-                                 bus->valuestring, dev_id, rgb_color);
-                        
+
+                        ESP_LOGI(TAG, "设置 %s Bus 设备 %d RGB颜色: 0x%06lX", bus->valuestring, dev_id, rgb_color);
+
                         // 调用Chain Bus RGB设置函数
                         esp_err_t ret = chain_bus_set_device_rgb(bus_idx, dev_id, rgb_color);
                         if (ret != ESP_OK) {
@@ -556,10 +540,10 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     }
                 } else if (strcmp(type->valuestring, "set_chain_bus_rgb") == 0) {
                     // 设置Chain Bus RGB颜色
-                    cJSON *bus = cJSON_GetObjectItem(json, "bus");
+                    cJSON *bus   = cJSON_GetObjectItem(json, "bus");
                     cJSON *color = cJSON_GetObjectItem(json, "color");
                     if (bus && color && cJSON_IsString(bus) && cJSON_IsNumber(color)) {
-                        int bus_idx = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
+                        int bus_idx        = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
                         uint32_t rgb_color = (uint32_t)color->valueint;
                         for (int i = 0; i < bus_status[bus_idx].device_count; i++) {
                             if (bus_status[bus_idx].device_status[i].connected) {
@@ -572,7 +556,7 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     cJSON *mapping_index = cJSON_GetObjectItem(json, "mapping_index");
                     if (mapping_index && cJSON_IsNumber(mapping_index)) {
                         int mapping_idx = mapping_index->valueint;
-                        if (mapping_idx >= 0 && mapping_idx < 4) { // 0-3 对应4种映射模式
+                        if (mapping_idx >= 0 && mapping_idx < 4) {  // 0-3 对应4种映射模式
                             // 更新全局状态
                             g_device_status.current_key_mapping = mapping_idx;
                             // 调用按键映射设置函数
@@ -585,7 +569,7 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                 } else if (strcmp(type->valuestring, "set_key_mapping_switch") == 0) {
                     // 设置按键映射开关
                     cJSON *mapping_type = cJSON_GetObjectItem(json, "mapping_type");
-                    cJSON *enabled = cJSON_GetObjectItem(json, "enabled");
+                    cJSON *enabled      = cJSON_GetObjectItem(json, "enabled");
                     if (mapping_type && enabled && cJSON_IsString(mapping_type) && cJSON_IsBool(enabled)) {
                         if (strcmp(mapping_type->valuestring, "usb") == 0) {
                             g_usb_mapping_enabled = cJSON_IsTrue(enabled);
@@ -598,82 +582,109 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                             // 自动保存配置
                             dualkey_config_save();
                         }
-                        
                     }
                 } else if (strcmp(type->valuestring, "set_device_hid_config") == 0) {
                     // 设置Chain设备HID配置
-                    cJSON *bus = cJSON_GetObjectItem(json, "bus");
+                    cJSON *bus       = cJSON_GetObjectItem(json, "bus");
                     cJSON *device_id = cJSON_GetObjectItem(json, "device_id");
-                    cJSON *config = cJSON_GetObjectItem(json, "config");
-                    
-                    if (bus && device_id && config && 
-                        cJSON_IsString(bus) && cJSON_IsNumber(device_id) && cJSON_IsObject(config)) {
-                        int bus_idx = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
+                    cJSON *config    = cJSON_GetObjectItem(json, "config");
+
+                    if (bus && device_id && config && cJSON_IsString(bus) && cJSON_IsNumber(device_id) &&
+                        cJSON_IsObject(config)) {
+                        int bus_idx    = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
                         uint8_t dev_id = (uint8_t)device_id->valueint;
-                        
+
                         ESP_LOGI(TAG, "设置 %s Bus 设备 %d HID配置", bus->valuestring, dev_id);
-                        
+
                         // 查找设备
                         int device_index = -1;
-                        esp_err_t ret = chain_bus_find_device_index(bus_idx, dev_id, &device_index);
+                        esp_err_t ret    = chain_bus_find_device_index(bus_idx, dev_id, &device_index);
                         if (ret == ESP_OK && device_index >= 0) {
-                            chain_device_status_t *dev_status = &bus_status[bus_idx].device_status[device_index];
+                            chain_device_status_t *dev_status    = &bus_status[bus_idx].device_status[device_index];
                             chain_device_hid_config_t hid_config = {};
-                            
+
                             // 根据设备类型解析配置
                             switch (dev_status->type) {
                                 case CHAIN_KEY_TYPE_CODE: {
-                                    cJSON *single_click = cJSON_GetObjectItem(config, "single_click");
-                                    cJSON *double_click = cJSON_GetObjectItem(config, "double_click");
-                                    cJSON *long_press = cJSON_GetObjectItem(config, "long_press");
-                                    cJSON *press_down = cJSON_GetObjectItem(config, "press_down");
+                                    cJSON *single_click  = cJSON_GetObjectItem(config, "single_click");
+                                    cJSON *double_click  = cJSON_GetObjectItem(config, "double_click");
+                                    cJSON *long_press    = cJSON_GetObjectItem(config, "long_press");
+                                    cJSON *press_down    = cJSON_GetObjectItem(config, "press_down");
                                     cJSON *press_release = cJSON_GetObjectItem(config, "press_release");
-                                    
-                                    if (single_click && cJSON_IsNumber(single_click)) hid_config.key_config.single_click = (hid_func_type_t)single_click->valueint;
-                                    if (double_click && cJSON_IsNumber(double_click)) hid_config.key_config.double_click = (hid_func_type_t)double_click->valueint;
-                                    if (long_press && cJSON_IsNumber(long_press)) hid_config.key_config.long_press = (hid_func_type_t)long_press->valueint;
-                                    if (press_down && cJSON_IsNumber(press_down)) hid_config.key_config.press_down = (hid_func_type_t)press_down->valueint;
-                                    if (press_release && cJSON_IsNumber(press_release)) hid_config.key_config.press_release = (hid_func_type_t)press_release->valueint;
-                                    
+
+                                    if (single_click && cJSON_IsNumber(single_click))
+                                        hid_config.key_config.single_click = (hid_func_type_t)single_click->valueint;
+                                    if (double_click && cJSON_IsNumber(double_click))
+                                        hid_config.key_config.double_click = (hid_func_type_t)double_click->valueint;
+                                    if (long_press && cJSON_IsNumber(long_press))
+                                        hid_config.key_config.long_press = (hid_func_type_t)long_press->valueint;
+                                    if (press_down && cJSON_IsNumber(press_down))
+                                        hid_config.key_config.press_down = (hid_func_type_t)press_down->valueint;
+                                    if (press_release && cJSON_IsNumber(press_release))
+                                        hid_config.key_config.press_release = (hid_func_type_t)press_release->valueint;
+
                                     chain_bus_set_device_hid_config(bus_idx, dev_id, &hid_config);
                                     break;
                                 }
                                 case CHAIN_JOYSTICK_TYPE_CODE: {
-                                    cJSON *single_click = cJSON_GetObjectItem(config, "single_click");
-                                    cJSON *double_click = cJSON_GetObjectItem(config, "double_click");
-                                    cJSON *long_press = cJSON_GetObjectItem(config, "long_press");
-                                    cJSON *press_down = cJSON_GetObjectItem(config, "press_down");
-                                    cJSON *press_release = cJSON_GetObjectItem(config, "press_release");
-                                    cJSON *xy_move_func = cJSON_GetObjectItem(config, "xy_move_func");
+                                    cJSON *single_click    = cJSON_GetObjectItem(config, "single_click");
+                                    cJSON *double_click    = cJSON_GetObjectItem(config, "double_click");
+                                    cJSON *long_press      = cJSON_GetObjectItem(config, "long_press");
+                                    cJSON *press_down      = cJSON_GetObjectItem(config, "press_down");
+                                    cJSON *press_release   = cJSON_GetObjectItem(config, "press_release");
+                                    cJSON *xy_move_func    = cJSON_GetObjectItem(config, "xy_move_func");
                                     cJSON *xy_move_reverse = cJSON_GetObjectItem(config, "xy_move_reverse");
 
-                                    if (single_click && cJSON_IsNumber(single_click)) hid_config.joystick_config.single_click = (hid_func_type_t)single_click->valueint;
-                                    if (double_click && cJSON_IsNumber(double_click)) hid_config.joystick_config.double_click = (hid_func_type_t)double_click->valueint;
-                                    if (long_press && cJSON_IsNumber(long_press)) hid_config.joystick_config.long_press = (hid_func_type_t)long_press->valueint;
-                                    if (press_down && cJSON_IsNumber(press_down)) hid_config.joystick_config.press_down = (hid_func_type_t)press_down->valueint;
-                                    if (xy_move_reverse && cJSON_IsBool(xy_move_reverse)) hid_config.joystick_config.xy_move_reverse = cJSON_IsTrue(xy_move_reverse);
-                                    if (press_release && cJSON_IsNumber(press_release)) hid_config.joystick_config.press_release = (hid_func_type_t)press_release->valueint;
-                                    if (xy_move_func && cJSON_IsNumber(xy_move_func)) hid_config.joystick_config.xy_move_func = (hid_func_type_t)xy_move_func->valueint;
+                                    if (single_click && cJSON_IsNumber(single_click))
+                                        hid_config.joystick_config.single_click =
+                                            (hid_func_type_t)single_click->valueint;
+                                    if (double_click && cJSON_IsNumber(double_click))
+                                        hid_config.joystick_config.double_click =
+                                            (hid_func_type_t)double_click->valueint;
+                                    if (long_press && cJSON_IsNumber(long_press))
+                                        hid_config.joystick_config.long_press = (hid_func_type_t)long_press->valueint;
+                                    if (press_down && cJSON_IsNumber(press_down))
+                                        hid_config.joystick_config.press_down = (hid_func_type_t)press_down->valueint;
+                                    if (xy_move_reverse && cJSON_IsBool(xy_move_reverse))
+                                        hid_config.joystick_config.xy_move_reverse = cJSON_IsTrue(xy_move_reverse);
+                                    if (press_release && cJSON_IsNumber(press_release))
+                                        hid_config.joystick_config.press_release =
+                                            (hid_func_type_t)press_release->valueint;
+                                    if (xy_move_func && cJSON_IsNumber(xy_move_func))
+                                        hid_config.joystick_config.xy_move_func =
+                                            (hid_func_type_t)xy_move_func->valueint;
 
                                     chain_bus_set_device_hid_config(bus_idx, dev_id, &hid_config);
                                     break;
                                 }
                                 case CHAIN_ENCODER_TYPE_CODE: {
-                                    cJSON *single_click = cJSON_GetObjectItem(config, "single_click");
-                                    cJSON *double_click = cJSON_GetObjectItem(config, "double_click");
-                                    cJSON *long_press = cJSON_GetObjectItem(config, "long_press");
-                                    cJSON *press_down = cJSON_GetObjectItem(config, "press_down");
-                                    cJSON *press_release = cJSON_GetObjectItem(config, "press_release");
-                                    cJSON *rotate_cw_func = cJSON_GetObjectItem(config, "rotate_cw_func");
+                                    cJSON *single_click    = cJSON_GetObjectItem(config, "single_click");
+                                    cJSON *double_click    = cJSON_GetObjectItem(config, "double_click");
+                                    cJSON *long_press      = cJSON_GetObjectItem(config, "long_press");
+                                    cJSON *press_down      = cJSON_GetObjectItem(config, "press_down");
+                                    cJSON *press_release   = cJSON_GetObjectItem(config, "press_release");
+                                    cJSON *rotate_cw_func  = cJSON_GetObjectItem(config, "rotate_cw_func");
                                     cJSON *rotate_ccw_func = cJSON_GetObjectItem(config, "rotate_ccw_func");
 
-                                    if (single_click && cJSON_IsNumber(single_click)) hid_config.encoder_config.single_click = (hid_func_type_t)single_click->valueint;
-                                    if (double_click && cJSON_IsNumber(double_click)) hid_config.encoder_config.double_click = (hid_func_type_t)double_click->valueint;
-                                    if (long_press && cJSON_IsNumber(long_press)) hid_config.encoder_config.long_press = (hid_func_type_t)long_press->valueint;
-                                    if (press_down && cJSON_IsNumber(press_down)) hid_config.encoder_config.press_down = (hid_func_type_t)press_down->valueint;
-                                    if (press_release && cJSON_IsNumber(press_release)) hid_config.encoder_config.press_release = (hid_func_type_t)press_release->valueint;
-                                    if (rotate_cw_func && cJSON_IsNumber(rotate_cw_func)) hid_config.encoder_config.rotate_cw_func = (hid_func_type_t)rotate_cw_func->valueint;
-                                    if (rotate_ccw_func && cJSON_IsNumber(rotate_ccw_func)) hid_config.encoder_config.rotate_ccw_func = (hid_func_type_t)rotate_ccw_func->valueint;
+                                    if (single_click && cJSON_IsNumber(single_click))
+                                        hid_config.encoder_config.single_click =
+                                            (hid_func_type_t)single_click->valueint;
+                                    if (double_click && cJSON_IsNumber(double_click))
+                                        hid_config.encoder_config.double_click =
+                                            (hid_func_type_t)double_click->valueint;
+                                    if (long_press && cJSON_IsNumber(long_press))
+                                        hid_config.encoder_config.long_press = (hid_func_type_t)long_press->valueint;
+                                    if (press_down && cJSON_IsNumber(press_down))
+                                        hid_config.encoder_config.press_down = (hid_func_type_t)press_down->valueint;
+                                    if (press_release && cJSON_IsNumber(press_release))
+                                        hid_config.encoder_config.press_release =
+                                            (hid_func_type_t)press_release->valueint;
+                                    if (rotate_cw_func && cJSON_IsNumber(rotate_cw_func))
+                                        hid_config.encoder_config.rotate_cw_func =
+                                            (hid_func_type_t)rotate_cw_func->valueint;
+                                    if (rotate_ccw_func && cJSON_IsNumber(rotate_ccw_func))
+                                        hid_config.encoder_config.rotate_ccw_func =
+                                            (hid_func_type_t)rotate_ccw_func->valueint;
 
                                     chain_bus_set_device_hid_config(bus_idx, dev_id, &hid_config);
                                     break;
@@ -681,22 +692,25 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                                 case CHAIN_ANGLE_TYPE_CODE: {
                                     cJSON *angle_func = cJSON_GetObjectItem(config, "angle_func");
 
-                                    if (angle_func && cJSON_IsNumber(angle_func)) hid_config.angle_config.angle_func = (hid_func_type_t)angle_func->valueint;
+                                    if (angle_func && cJSON_IsNumber(angle_func))
+                                        hid_config.angle_config.angle_func = (hid_func_type_t)angle_func->valueint;
 
                                     chain_bus_set_device_hid_config(bus_idx, dev_id, &hid_config);
                                     break;
                                 }
                                 default:
-                                    ESP_LOGW(TAG, "设备类型 %s 不支持HID配置", chain_device_type_name(dev_status->type));
+                                    ESP_LOGW(TAG, "设备类型 %s 不支持HID配置",
+                                             chain_device_type_name(dev_status->type));
                                     break;
                             }
-                            
+
                             // 保存设备配置到NVS
                             esp_err_t save_ret = chain_bus_save_device_config(bus_idx, dev_id);
                             if (save_ret == ESP_OK) {
                                 ESP_LOGI(TAG, "设备 %s Bus ID:%d 配置已保存", bus->valuestring, dev_id);
                             } else {
-                                ESP_LOGE(TAG, "设备 %s Bus ID:%d 配置保存失败: %s", bus->valuestring, dev_id, esp_err_to_name(save_ret));
+                                ESP_LOGE(TAG, "设备 %s Bus ID:%d 配置保存失败: %s", bus->valuestring, dev_id,
+                                         esp_err_to_name(save_ret));
                             }
 
                             // 标记状态更新，使配置变更立即发送到前端
@@ -713,42 +727,42 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     }
                 } else if (strcmp(type->valuestring, "reset_device_hid_config") == 0) {
                     // 恢复Chain设备HID配置为默认值
-                    cJSON *bus = cJSON_GetObjectItem(json, "bus");
+                    cJSON *bus       = cJSON_GetObjectItem(json, "bus");
                     cJSON *device_id = cJSON_GetObjectItem(json, "device_id");
-                    
-                    if (bus && device_id && 
-                        cJSON_IsString(bus) && cJSON_IsNumber(device_id)) {
-                        int bus_idx = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
+
+                    if (bus && device_id && cJSON_IsString(bus) && cJSON_IsNumber(device_id)) {
+                        int bus_idx    = (strcmp(bus->valuestring, "left") == 0) ? 0 : 1;
                         uint8_t dev_id = (uint8_t)device_id->valueint;
-                        
+
                         ESP_LOGI(TAG, "恢复 %s Bus 设备 %d HID配置为默认值", bus->valuestring, dev_id);
-                        
+
                         // 查找设备
                         int device_index = -1;
-                        esp_err_t ret = chain_bus_find_device_index(bus_idx, dev_id, &device_index);
+                        esp_err_t ret    = chain_bus_find_device_index(bus_idx, dev_id, &device_index);
                         if (ret == ESP_OK && device_index >= 0) {
                             chain_device_status_t *dev_status = &bus_status[bus_idx].device_status[device_index];
-                            
+
                             // 删除保存的配置
                             esp_err_t delete_ret = chain_bus_config_delete(dev_status->uid);
                             if (delete_ret == ESP_OK) {
                                 ESP_LOGI(TAG, "设备 %s Bus ID:%d 保存的配置已删除", bus->valuestring, dev_id);
                             } else {
-                                ESP_LOGW(TAG, "设备 %s Bus ID:%d 配置删除失败: %s", bus->valuestring, dev_id, esp_err_to_name(delete_ret));
+                                ESP_LOGW(TAG, "设备 %s Bus ID:%d 配置删除失败: %s", bus->valuestring, dev_id,
+                                         esp_err_to_name(delete_ret));
                             }
-                            
+
                             // 重新初始化设备HID配置为默认值
                             chain_bus_init_device_hid_config(dev_status, bus_idx);
-                            
+
                             // 标记状态更新，使配置变更立即发送到前端
                             dev_status->status_updated = true;
-                            
+
                             // 立即触发状态刷新，确保配置更新后前端能收到最新状态
                             status_refresh_type_t refresh_msg = STATUS_REFRESH_IMMEDIATE;
                             if (status_refresh_queue != NULL) {
                                 xQueueSend(status_refresh_queue, &refresh_msg, 0);
                             }
-                            
+
                             ESP_LOGI(TAG, "设备 %s Bus ID:%d HID配置已恢复为默认值", bus->valuestring, dev_id);
                         } else {
                             ESP_LOGE(TAG, "找不到设备 %s Bus ID: %d", bus->valuestring, dev_id);
@@ -764,7 +778,7 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     } else {
                         ESP_LOGE(TAG, "蓝牙广播启动失败: %s", esp_err_to_name(ret));
                     }
-                    
+
                 } else if (strcmp(type->valuestring, "bluetooth_disconnect") == 0) {
                     // 断开蓝牙连接
                     ESP_LOGI(TAG, "断开蓝牙连接");
@@ -776,12 +790,11 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     } else {
                         ESP_LOGE(TAG, "断开蓝牙连接失败: %s", esp_err_to_name(ret));
                     }
-                    
-                }
-                else if (strcmp(type->valuestring, "bluetooth_start_pairing") == 0) {
+
+                } else if (strcmp(type->valuestring, "bluetooth_start_pairing") == 0) {
                     // 开始蓝牙配对 TODO
                     ESP_LOGI(TAG, "开始蓝牙配对");
-                    
+
                 } else if (strcmp(type->valuestring, "save_dualkey_config") == 0) {
                     // 保存DualKey配置
                     ESP_LOGI(TAG, "保存DualKey配置");
@@ -791,7 +804,7 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     } else {
                         ESP_LOGE(TAG, "DualKey配置保存失败: %s", esp_err_to_name(ret));
                     }
-                    
+
                 } else if (strcmp(type->valuestring, "load_dualkey_config") == 0) {
                     // 加载DualKey配置
                     ESP_LOGI(TAG, "加载DualKey配置");
@@ -805,36 +818,36 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     } else {
                         ESP_LOGE(TAG, "DualKey配置加载失败: %s", esp_err_to_name(ret));
                     }
-                    
+
                 } else if (strcmp(type->valuestring, "set_wifi_config") == 0) {
                     // 设置WiFi配置
                     cJSON *config = cJSON_GetObjectItem(json, "config");
                     if (config && cJSON_IsObject(config)) {
                         wifi_config_saved_t wifi_cfg;
                         memset(&wifi_cfg, 0, sizeof(wifi_cfg));
-                        
-                        cJSON *ssid = cJSON_GetObjectItem(config, "ssid");
-                        cJSON *password = cJSON_GetObjectItem(config, "password");
+
+                        cJSON *ssid          = cJSON_GetObjectItem(config, "ssid");
+                        cJSON *password      = cJSON_GetObjectItem(config, "password");
                         cJSON *use_static_ip = cJSON_GetObjectItem(config, "use_static_ip");
-                        
+
                         if (ssid && password && cJSON_IsString(ssid) && cJSON_IsString(password)) {
                             strncpy(wifi_cfg.ssid, ssid->valuestring, sizeof(wifi_cfg.ssid) - 1);
                             strncpy(wifi_cfg.password, password->valuestring, sizeof(wifi_cfg.password) - 1);
                             wifi_cfg.use_static_ip = (use_static_ip && cJSON_IsTrue(use_static_ip));
-                            
+
                             if (wifi_cfg.use_static_ip) {
                                 cJSON *static_ip = cJSON_GetObjectItem(config, "static_ip");
-                                cJSON *netmask = cJSON_GetObjectItem(config, "netmask");
-                                cJSON *gateway = cJSON_GetObjectItem(config, "gateway");
-                                
-                                if (static_ip && netmask && gateway && 
-                                    cJSON_IsString(static_ip) && cJSON_IsString(netmask) && cJSON_IsString(gateway)) {
+                                cJSON *netmask   = cJSON_GetObjectItem(config, "netmask");
+                                cJSON *gateway   = cJSON_GetObjectItem(config, "gateway");
+
+                                if (static_ip && netmask && gateway && cJSON_IsString(static_ip) &&
+                                    cJSON_IsString(netmask) && cJSON_IsString(gateway)) {
                                     strncpy(wifi_cfg.static_ip, static_ip->valuestring, sizeof(wifi_cfg.static_ip) - 1);
                                     strncpy(wifi_cfg.netmask, netmask->valuestring, sizeof(wifi_cfg.netmask) - 1);
                                     strncpy(wifi_cfg.gateway, gateway->valuestring, sizeof(wifi_cfg.gateway) - 1);
                                 }
                             }
-                            
+
                             // 保存配置
                             esp_err_t save_ret = wifi_config_save(&wifi_cfg);
                             if (save_ret == ESP_OK) {
@@ -863,7 +876,7 @@ static esp_err_t websocket_handler(httpd_req_t *req)
             }
             cJSON_Delete(json);
         }
-        
+
         free(buf);
     }
 
@@ -878,12 +891,12 @@ static void websocket_send_status(void)
         return;
     }
 
-    cJSON *json = cJSON_CreateObject();
-    cJSON *dualkey = cJSON_CreateObject();
-    cJSON *chainbus = cJSON_CreateObject();
-    cJSON *left_bus = cJSON_CreateObject();
+    cJSON *json      = cJSON_CreateObject();
+    cJSON *dualkey   = cJSON_CreateObject();
+    cJSON *chainbus  = cJSON_CreateObject();
+    cJSON *left_bus  = cJSON_CreateObject();
     cJSON *right_bus = cJSON_CreateObject();
-    
+
     // DualKey状态
     cJSON_AddBoolToObject(dualkey, "left_key_pressed", g_device_status.left_key_pressed);
     cJSON_AddBoolToObject(dualkey, "right_key_pressed", g_device_status.right_key_pressed);
@@ -895,33 +908,33 @@ static void websocket_send_status(void)
     cJSON_AddNumberToObject(dualkey, "battery_voltage", g_device_status.battery_voltage);
     cJSON_AddNumberToObject(dualkey, "charge_status", g_device_status.charge_status);
     cJSON_AddNumberToObject(dualkey, "battery_percentage", g_device_status.battery_percentage);
-    
+
     // 蓝牙状态
     cJSON_AddBoolToObject(dualkey, "bluetooth_connected", g_device_status.bluetooth_connected);
     cJSON_AddStringToObject(dualkey, "bluetooth_device_name", g_device_status.bluetooth_device_name);
     cJSON_AddNumberToObject(dualkey, "bluetooth_pairing_status", g_device_status.bluetooth_pairing_status);
     cJSON_AddBoolToObject(dualkey, "bluetooth_adv_status", g_device_status.bluetooth_adv_status);
-    
+
     // HID按键映射状态
     cJSON_AddNumberToObject(dualkey, "current_key_mapping", g_device_status.current_key_mapping);
     cJSON_AddBoolToObject(dualkey, "usb_mapping_enabled", g_usb_mapping_enabled);
     cJSON_AddBoolToObject(dualkey, "ble_mapping_enabled", g_ble_mapping_enabled);
-    
+
     // WIFI状态
     cJSON_AddStringToObject(dualkey, "wifi_ssid", g_device_status.wifi_ssid);
     cJSON_AddStringToObject(dualkey, "wifi_ip", g_device_status.wifi_ip);
     cJSON_AddNumberToObject(dualkey, "wifi_rssi", g_device_status.wifi_rssi);
     cJSON_AddBoolToObject(dualkey, "wifi_connected", g_device_status.wifi_connected);
-    
+
     // Chain Bus状态 - 只发送有更新的信息
-    bool left_connected = bus_status[0].initialized && (bus_status[0].device_count > 0);
+    bool left_connected  = bus_status[0].initialized && (bus_status[0].device_count > 0);
     bool right_connected = bus_status[1].initialized && (bus_status[1].device_count > 0);
-    
+
     cJSON_AddBoolToObject(left_bus, "connected", left_connected);
     cJSON_AddNumberToObject(left_bus, "device_count", bus_status[0].device_count);
     cJSON_AddBoolToObject(right_bus, "connected", right_connected);
     cJSON_AddNumberToObject(right_bus, "device_count", bus_status[1].device_count);
-    
+
     // 添加当前连接设备的ID列表（用于前端判断设备离线）
     cJSON *left_device_ids = cJSON_CreateArray();
     for (int i = 0; i < bus_status[0].device_count; i++) {
@@ -930,7 +943,7 @@ static void websocket_send_status(void)
         }
     }
     cJSON_AddItemToObject(left_bus, "connected_device_ids", left_device_ids);
-    
+
     cJSON *right_device_ids = cJSON_CreateArray();
     for (int i = 0; i < bus_status[1].device_count; i++) {
         if (bus_status[1].device_status[i].connected) {
@@ -938,20 +951,21 @@ static void websocket_send_status(void)
         }
     }
     cJSON_AddItemToObject(right_bus, "connected_device_ids", right_device_ids);
-    
+
     // 添加设备信息 - 只发送有更新的设备
-    cJSON *left_devices = cJSON_CreateArray();
+    cJSON *left_devices  = cJSON_CreateArray();
     cJSON *right_devices = cJSON_CreateArray();
-    
+
     // 处理Bus设备（左Bus和右Bus）
     for (int bus_idx = 0; bus_idx < 2; bus_idx++) {
         cJSON *devices_array = (bus_idx == 0) ? left_devices : right_devices;
-        
+
         for (int i = 0; i < bus_status[bus_idx].device_count; i++) {
-            if (bus_status[bus_idx].device_status[i].status_updated || send_bus_all_data || !bus_status[bus_idx].device_status[i].communication_flag) {
-                cJSON *device = cJSON_CreateObject();
+            if (bus_status[bus_idx].device_status[i].status_updated || send_bus_all_data ||
+                !bus_status[bus_idx].device_status[i].communication_flag) {
+                cJSON *device                     = cJSON_CreateObject();
                 chain_device_status_t *dev_status = &bus_status[bus_idx].device_status[i];
-                
+
                 // 基本设备信息
                 cJSON_AddNumberToObject(device, "id", dev_status->id);
                 cJSON_AddStringToObject(device, "type", chain_device_type_name(dev_status->type));
@@ -964,81 +978,111 @@ static void websocket_send_status(void)
                     cJSON_AddItemToObject(device, "uid", uid_array);
                 }
                 cJSON_AddBoolToObject(device, "communication_flag", dev_status->communication_flag);
-                
+
                 // RGB状态
                 cJSON_AddNumberToObject(device, "rgb_color", dev_status->rgb_color);
                 cJSON_AddBoolToObject(device, "rgb_setting", dev_status->rgb_setting);
-                
+
                 // 设备数据
                 cJSON *device_data = cJSON_CreateObject();
                 switch (dev_status->type) {
                     case CHAIN_KEY_TYPE_CODE:
-                        cJSON_AddNumberToObject(device_data, "button_status", dev_status->device_data.key_data.button_status);
+                        cJSON_AddNumberToObject(device_data, "button_status",
+                                                dev_status->device_data.key_data.button_status);
                         break;
                     case CHAIN_PIR_TYPE_CODE:
-                        cJSON_AddNumberToObject(device_data, "detect_status", dev_status->device_data.pir_data.detect_status);
-                        cJSON_AddNumberToObject(device_data, "trigger_count", dev_status->device_data.pir_data.trigger_count);
+                        cJSON_AddNumberToObject(device_data, "detect_status",
+                                                dev_status->device_data.pir_data.detect_status);
+                        cJSON_AddNumberToObject(device_data, "trigger_count",
+                                                dev_status->device_data.pir_data.trigger_count);
                         break;
                     case CHAIN_JOYSTICK_TYPE_CODE:
                         cJSON_AddNumberToObject(device_data, "x_value", dev_status->device_data.joystick_data.x_value);
                         cJSON_AddNumberToObject(device_data, "y_value", dev_status->device_data.joystick_data.y_value);
-                        cJSON_AddNumberToObject(device_data, "button_status", dev_status->device_data.joystick_data.button_status);
+                        cJSON_AddNumberToObject(device_data, "button_status",
+                                                dev_status->device_data.joystick_data.button_status);
                         break;
                     case CHAIN_ENCODER_TYPE_CODE:
-                        cJSON_AddNumberToObject(device_data, "encoder_value", dev_status->device_data.encoder_data.encoder_value);
-                        cJSON_AddNumberToObject(device_data, "last_encoder_value", dev_status->device_data.encoder_data.last_encoder_value);
-                        cJSON_AddNumberToObject(device_data, "button_status", dev_status->device_data.encoder_data.button_status);
+                        cJSON_AddNumberToObject(device_data, "encoder_value",
+                                                dev_status->device_data.encoder_data.encoder_value);
+                        cJSON_AddNumberToObject(device_data, "last_encoder_value",
+                                                dev_status->device_data.encoder_data.last_encoder_value);
+                        cJSON_AddNumberToObject(device_data, "button_status",
+                                                dev_status->device_data.encoder_data.button_status);
                         break;
                     case CHAIN_TOF_TYPE_CODE:
                         cJSON_AddNumberToObject(device_data, "distance", dev_status->device_data.tof_data.distance);
-                        cJSON_AddNumberToObject(device_data, "last_distance", dev_status->device_data.tof_data.last_distance);
+                        cJSON_AddNumberToObject(device_data, "last_distance",
+                                                dev_status->device_data.tof_data.last_distance);
                         break;
                     case CHAIN_ANGLE_TYPE_CODE:
-                        cJSON_AddNumberToObject(device_data, "angle_value", dev_status->device_data.angle_data.angle_value);
-                        cJSON_AddNumberToObject(device_data, "last_angle_value", dev_status->device_data.angle_data.last_angle_value);
+                        cJSON_AddNumberToObject(device_data, "angle_value",
+                                                dev_status->device_data.angle_data.angle_value);
+                        cJSON_AddNumberToObject(device_data, "last_angle_value",
+                                                dev_status->device_data.angle_data.last_angle_value);
                         break;
                     case CHAIN_SWITCH_TYPE_CODE:
-                        cJSON_AddNumberToObject(device_data, "switch_status", dev_status->device_data.switch_data.switch_status);
-                        cJSON_AddNumberToObject(device_data, "switch_count", dev_status->device_data.switch_data.switch_count);
+                        cJSON_AddNumberToObject(device_data, "switch_status",
+                                                dev_status->device_data.switch_data.switch_status);
+                        cJSON_AddNumberToObject(device_data, "switch_count",
+                                                dev_status->device_data.switch_data.switch_count);
                         break;
                     default:
                         break;
                 }
                 cJSON_AddItemToObject(device, "device_data", device_data);
-                
+
                 // 添加HID配置信息（根据设备类型）
                 cJSON *hid_config = cJSON_CreateObject();
                 switch (dev_status->type) {
                     case CHAIN_KEY_TYPE_CODE: {
-                        cJSON_AddNumberToObject(hid_config, "single_click", dev_status->hid_config.key_config.single_click);
-                        cJSON_AddNumberToObject(hid_config, "double_click", dev_status->hid_config.key_config.double_click);
+                        cJSON_AddNumberToObject(hid_config, "single_click",
+                                                dev_status->hid_config.key_config.single_click);
+                        cJSON_AddNumberToObject(hid_config, "double_click",
+                                                dev_status->hid_config.key_config.double_click);
                         cJSON_AddNumberToObject(hid_config, "long_press", dev_status->hid_config.key_config.long_press);
                         cJSON_AddNumberToObject(hid_config, "press_down", dev_status->hid_config.key_config.press_down);
-                        cJSON_AddNumberToObject(hid_config, "press_release", dev_status->hid_config.key_config.press_release);
+                        cJSON_AddNumberToObject(hid_config, "press_release",
+                                                dev_status->hid_config.key_config.press_release);
                         break;
                     }
                     case CHAIN_JOYSTICK_TYPE_CODE: {
-                        cJSON_AddNumberToObject(hid_config, "single_click", dev_status->hid_config.joystick_config.single_click);
-                        cJSON_AddNumberToObject(hid_config, "double_click", dev_status->hid_config.joystick_config.double_click);
-                        cJSON_AddNumberToObject(hid_config, "long_press", dev_status->hid_config.joystick_config.long_press);
-                        cJSON_AddNumberToObject(hid_config, "press_down", dev_status->hid_config.joystick_config.press_down);
-                        cJSON_AddNumberToObject(hid_config, "press_release", dev_status->hid_config.joystick_config.press_release);
-                        cJSON_AddBoolToObject(hid_config, "xy_move_reverse", dev_status->hid_config.joystick_config.xy_move_reverse);
-                        cJSON_AddNumberToObject(hid_config, "xy_move_func", dev_status->hid_config.joystick_config.xy_move_func);
+                        cJSON_AddNumberToObject(hid_config, "single_click",
+                                                dev_status->hid_config.joystick_config.single_click);
+                        cJSON_AddNumberToObject(hid_config, "double_click",
+                                                dev_status->hid_config.joystick_config.double_click);
+                        cJSON_AddNumberToObject(hid_config, "long_press",
+                                                dev_status->hid_config.joystick_config.long_press);
+                        cJSON_AddNumberToObject(hid_config, "press_down",
+                                                dev_status->hid_config.joystick_config.press_down);
+                        cJSON_AddNumberToObject(hid_config, "press_release",
+                                                dev_status->hid_config.joystick_config.press_release);
+                        cJSON_AddBoolToObject(hid_config, "xy_move_reverse",
+                                              dev_status->hid_config.joystick_config.xy_move_reverse);
+                        cJSON_AddNumberToObject(hid_config, "xy_move_func",
+                                                dev_status->hid_config.joystick_config.xy_move_func);
                         break;
                     }
                     case CHAIN_ENCODER_TYPE_CODE: {
-                        cJSON_AddNumberToObject(hid_config, "single_click", dev_status->hid_config.encoder_config.single_click);
-                        cJSON_AddNumberToObject(hid_config, "double_click", dev_status->hid_config.encoder_config.double_click);
-                        cJSON_AddNumberToObject(hid_config, "long_press", dev_status->hid_config.encoder_config.long_press);
-                        cJSON_AddNumberToObject(hid_config, "press_down", dev_status->hid_config.encoder_config.press_down);
-                        cJSON_AddNumberToObject(hid_config, "press_release", dev_status->hid_config.encoder_config.press_release);
-                        cJSON_AddNumberToObject(hid_config, "rotate_cw_func", dev_status->hid_config.encoder_config.rotate_cw_func);
-                        cJSON_AddNumberToObject(hid_config, "rotate_ccw_func", dev_status->hid_config.encoder_config.rotate_ccw_func);
+                        cJSON_AddNumberToObject(hid_config, "single_click",
+                                                dev_status->hid_config.encoder_config.single_click);
+                        cJSON_AddNumberToObject(hid_config, "double_click",
+                                                dev_status->hid_config.encoder_config.double_click);
+                        cJSON_AddNumberToObject(hid_config, "long_press",
+                                                dev_status->hid_config.encoder_config.long_press);
+                        cJSON_AddNumberToObject(hid_config, "press_down",
+                                                dev_status->hid_config.encoder_config.press_down);
+                        cJSON_AddNumberToObject(hid_config, "press_release",
+                                                dev_status->hid_config.encoder_config.press_release);
+                        cJSON_AddNumberToObject(hid_config, "rotate_cw_func",
+                                                dev_status->hid_config.encoder_config.rotate_cw_func);
+                        cJSON_AddNumberToObject(hid_config, "rotate_ccw_func",
+                                                dev_status->hid_config.encoder_config.rotate_ccw_func);
                         break;
                     }
                     case CHAIN_ANGLE_TYPE_CODE: {
-                        cJSON_AddNumberToObject(hid_config, "angle_func", dev_status->hid_config.angle_config.angle_func);
+                        cJSON_AddNumberToObject(hid_config, "angle_func",
+                                                dev_status->hid_config.angle_config.angle_func);
                         break;
                     }
                     default:
@@ -1046,17 +1090,17 @@ static void websocket_send_status(void)
                         break;
                 }
                 cJSON_AddItemToObject(device, "hid_config", hid_config);
-                
+
                 // 如果有新事件，添加事件信息
                 if (dev_status->event_updated) {
                     cJSON_AddStringToObject(device, "last_event", dev_status->last_event_desc);
                     cJSON_AddNumberToObject(device, "event_time", dev_status->last_event_time);
-                    dev_status->event_updated = false; // 重置事件更新标记
+                    dev_status->event_updated = false;  // 重置事件更新标记
                 }
-                
+
                 cJSON_AddItemToArray(devices_array, device);
-                dev_status->status_updated = false; // 重置状态更新标记
-                dev_status->rgb_updated = false; // 重置RGB更新标记
+                dev_status->status_updated = false;  // 重置状态更新标记
+                dev_status->rgb_updated    = false;  // 重置RGB更新标记
             }
         }
     }
@@ -1064,30 +1108,30 @@ static void websocket_send_status(void)
     send_bus_all_data = false;
     cJSON_AddItemToObject(left_bus, "devices", left_devices);
     cJSON_AddItemToObject(right_bus, "devices", right_devices);
-    
+
     cJSON_AddItemToObject(chainbus, "left_bus", left_bus);
     cJSON_AddItemToObject(chainbus, "right_bus", right_bus);
-    
+
     cJSON_AddStringToObject(json, "type", "status_update");
     cJSON_AddItemToObject(json, "dualkey", dualkey);
     cJSON_AddItemToObject(json, "chainbus", chainbus);
-    
+
     char *json_str = cJSON_Print(json);
     if (json_str) {
         httpd_ws_frame_t ws_pkt;
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-        ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-        ws_pkt.payload = (uint8_t*)json_str;
-        ws_pkt.len = strlen(json_str);
-        
+        ws_pkt.type    = HTTPD_WS_TYPE_TEXT;
+        ws_pkt.payload = (uint8_t *)json_str;
+        ws_pkt.len     = strlen(json_str);
+
         esp_err_t ret = httpd_ws_send_frame_async(server, websocket_fd, &ws_pkt);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "WebSocket发送失败: %s", esp_err_to_name(ret));
         }
-        
+
         free(json_str);
     }
-    
+
     cJSON_Delete(json);
 }
 
@@ -1095,71 +1139,70 @@ static void websocket_send_status(void)
 static void update_device_status(void)
 {
     // 更新USB连接状态
-    g_device_status.usb_connected = true; // 暂时硬编码
-    
+    g_device_status.usb_connected = true;  // 暂时硬编码
+
     // 更新拨码开关位置
     if (sys_param) {
         switch (switch_pos) {
             case 0:
                 // g_device_status.usb_mode = 0;
-                g_device_status.dip_switch_pos = 0; // center
+                g_device_status.dip_switch_pos = 0;  // center
                 break;
             case 1:
                 // g_device_status.usb_mode = 1;
-                g_device_status.dip_switch_pos = 1; // left
+                g_device_status.dip_switch_pos = 1;  // left
                 break;
             case 2:
                 // g_device_status.usb_mode = 2;
-                g_device_status.dip_switch_pos = 2; // right
+                g_device_status.dip_switch_pos = 2;  // right
                 break;
             default:
                 break;
         }
     }
-    
+
     // 更新电池状态 (使用test_case.c中的真实数据)
-    g_device_status.battery_voltage = g_battery_voltage;
-    g_device_status.charge_status = g_charging_status;
+    g_device_status.battery_voltage    = g_battery_voltage;
+    g_device_status.charge_status      = g_charging_status;
     g_device_status.battery_percentage = g_battery_percentage;
-    g_device_status.usb_connected = g_usb_connected;
-    
+    g_device_status.usb_connected      = g_usb_connected;
+
     // 更新蓝牙状态
     g_device_status.bluetooth_connected = (g_connect_status == 2);
-    const char* device_name = ble_hid_get_device_name();
+    const char *device_name             = ble_hid_get_device_name();
     if (device_name != NULL) {
         strncpy(g_device_status.bluetooth_device_name, device_name, sizeof(g_device_status.bluetooth_device_name) - 1);
         g_device_status.bluetooth_device_name[sizeof(g_device_status.bluetooth_device_name) - 1] = '\0';
     }
-    
+
     // 更新配对状态 (基于连接状态推断)
     g_device_status.bluetooth_pairing_status = g_connect_status;
-    
+
     // 更新广播状态
-    g_ble_adv_status = ble_hid_is_advertising();
+    g_ble_adv_status                     = ble_hid_is_advertising();
     g_device_status.bluetooth_adv_status = g_ble_adv_status;
-    
-    
+
     // 同步按键映射状态
     g_device_status.current_key_mapping = btn_progress_get_key_mapping();
-    
+
     // 更新WIFI状态
     g_device_status.wifi_connected = wifi_connected;
-    
+
     // 获取WiFi信息
     if (wifi_connected) {
         // 获取SSID
         wifi_ap_record_t ap_info;
         esp_err_t ret = esp_wifi_sta_get_ap_info(&ap_info);
         if (ret == ESP_OK) {
-            strncpy(g_device_status.wifi_ssid, (char*)ap_info.ssid, sizeof(g_device_status.wifi_ssid) - 1);
+            strncpy(g_device_status.wifi_ssid, (char *)ap_info.ssid, sizeof(g_device_status.wifi_ssid) - 1);
             g_device_status.wifi_ssid[sizeof(g_device_status.wifi_ssid) - 1] = '\0';
-            g_device_status.wifi_rssi = ap_info.rssi;
+            g_device_status.wifi_rssi                                        = ap_info.rssi;
         } else {
             // 如果无法获取AP信息，清空SSID
             strcpy(g_device_status.wifi_ssid, "");
             g_device_status.wifi_rssi = 0;
         }
-        
+
         // 获取IP地址
         esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         if (netif != NULL) {
@@ -1179,9 +1222,7 @@ static void update_device_status(void)
         strcpy(g_device_status.wifi_ip, "0.0.0.0");
         g_device_status.wifi_rssi = 0;
     }
-    
 }
-
 
 static void set_key_rgb_color(int key_index, uint32_t rgb_color)
 {
@@ -1196,22 +1237,23 @@ static void set_key_rgb_color(int key_index, uint32_t rgb_color)
 static void websocket_task(void *pvParameters)
 {
     status_refresh_type_t refresh_msg;
-    TickType_t timeout = pdMS_TO_TICKS(500); // 500ms超时
-    
+    TickType_t timeout = pdMS_TO_TICKS(500);  // 500ms超时
+
     while (1) {
         // 等待状态刷新指令，超时时间为500ms
         if (xQueueReceive(status_refresh_queue, &refresh_msg, timeout) == pdTRUE) {
             // 收到刷新指令，立即刷新状态
-            // ESP_LOGI(TAG, "Status refresh requested: %s", refresh_msg == STATUS_REFRESH_IMMEDIATE ? "immediate" : "normal");
+            // ESP_LOGI(TAG, "Status refresh requested: %s", refresh_msg == STATUS_REFRESH_IMMEDIATE ? "immediate" :
+            // "normal");
         } else {
             // 超时，执行正常的状态更新
             // ESP_LOGD(TAG, "Status update timeout, performing normal refresh");
         }
-        
+
         // 更新设备状态
         update_device_status();
         websocket_send_status();
-        
+
         // 更新电源状态
         update_power_status(NULL);
     }
@@ -1223,111 +1265,64 @@ static httpd_handle_t start_webserver(void)
     if (server != NULL) {
         return server;
     }
-    
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
     config.max_open_sockets = 7;
     config.max_uri_handlers = 15;
     config.lru_purge_enable = true;
-    
+
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
         ESP_LOGI(TAG, "Registering URI handlers");
-        
+
         // 注册URI处理器
-        httpd_uri_t index_uri = {
-            .uri = "/",
-            .method = HTTP_GET,
-            .handler = index_get_handler
-        };
+        httpd_uri_t index_uri = {.uri = "/", .method = HTTP_GET, .handler = index_get_handler};
         httpd_register_uri_handler(server, &index_uri);
-        
-        httpd_uri_t styles_uri = {
-            .uri = "/styles.css",
-            .method = HTTP_GET,
-            .handler = styles_get_handler
-        };
+
+        httpd_uri_t styles_uri = {.uri = "/styles.css", .method = HTTP_GET, .handler = styles_get_handler};
         httpd_register_uri_handler(server, &styles_uri);
-        
-        httpd_uri_t script_uri = {
-            .uri = "/script.js",
-            .method = HTTP_GET,
-            .handler = script_get_handler
-        };
+
+        httpd_uri_t script_uri = {.uri = "/script.js", .method = HTTP_GET, .handler = script_get_handler};
         httpd_register_uri_handler(server, &script_uri);
-        
+
         // 注册WebSocket处理器
         httpd_uri_t websocket_uri = {
-            .uri = "/ws",
-            .method = HTTP_GET,
-            .handler = websocket_handler,
-            .user_ctx = NULL,
-            .is_websocket = true
-        };
+            .uri = "/ws", .method = HTTP_GET, .handler = websocket_handler, .user_ctx = NULL, .is_websocket = true};
         httpd_register_uri_handler(server, &websocket_uri);
 
-        httpd_uri_t favicon_uri = {
-            .uri = "/favicon.ico",
-            .method = HTTP_GET,
-            .handler = favicon_get_handler
-        };
+        httpd_uri_t favicon_uri = {.uri = "/favicon.ico", .method = HTTP_GET, .handler = favicon_get_handler};
         httpd_register_uri_handler(server, &favicon_uri);
 
         httpd_uri_t chain_angle_uri = {
-            .uri = "/Chain_Angle.jpg",
-            .method = HTTP_GET,
-            .handler = chain_angle_get_handler
-        };
+            .uri = "/Chain_Angle.jpg", .method = HTTP_GET, .handler = chain_angle_get_handler};
         httpd_register_uri_handler(server, &chain_angle_uri);
-        
+
         httpd_uri_t chain_blank_uri = {
-            .uri = "/Chain_Blank.jpg",
-            .method = HTTP_GET,
-            .handler = chain_blank_get_handler
-        };
+            .uri = "/Chain_Blank.jpg", .method = HTTP_GET, .handler = chain_blank_get_handler};
         httpd_register_uri_handler(server, &chain_blank_uri);
 
         httpd_uri_t chain_dualKey_uri = {
-            .uri = "/Chain_DualKey.png",
-            .method = HTTP_GET,
-            .handler = chain_dualKey_get_handler
-        };
+            .uri = "/Chain_DualKey.png", .method = HTTP_GET, .handler = chain_dualKey_get_handler};
         httpd_register_uri_handler(server, &chain_dualKey_uri);
 
         httpd_uri_t chain_encoder_uri = {
-            .uri = "/Chain_Encoder.jpg",
-            .method = HTTP_GET,
-            .handler = chain_encoder_get_handler
-        };
+            .uri = "/Chain_Encoder.jpg", .method = HTTP_GET, .handler = chain_encoder_get_handler};
         httpd_register_uri_handler(server, &chain_encoder_uri);
-        
+
         httpd_uri_t chain_joystick_uri = {
-            .uri = "/Chain_Joystick.jpg",
-            .method = HTTP_GET,
-            .handler = chain_joystick_get_handler
-        };
+            .uri = "/Chain_Joystick.jpg", .method = HTTP_GET, .handler = chain_joystick_get_handler};
         httpd_register_uri_handler(server, &chain_joystick_uri);
-        
-        httpd_uri_t chain_key_uri = {
-            .uri = "/Chain_Key.jpg",
-            .method = HTTP_GET,
-            .handler = chain_key_get_handler
-        };
+
+        httpd_uri_t chain_key_uri = {.uri = "/Chain_Key.jpg", .method = HTTP_GET, .handler = chain_key_get_handler};
         httpd_register_uri_handler(server, &chain_key_uri);
-        
+
         httpd_uri_t chain_mount_uri = {
-            .uri = "/Chain_Mount.jpg",
-            .method = HTTP_GET,
-            .handler = chain_mount_get_handler
-        };
+            .uri = "/Chain_Mount.jpg", .method = HTTP_GET, .handler = chain_mount_get_handler};
         httpd_register_uri_handler(server, &chain_mount_uri);
 
-        httpd_uri_t chain_tof_uri = {
-            .uri = "/Chain_ToF.jpg",
-            .method = HTTP_GET,
-            .handler = chain_tof_get_handler
-        };
+        httpd_uri_t chain_tof_uri = {.uri = "/Chain_ToF.jpg", .method = HTTP_GET, .handler = chain_tof_get_handler};
         httpd_register_uri_handler(server, &chain_tof_uri);
-        
+
         // 注册404错误处理器
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, http_404_error_handler);
     }
@@ -1336,19 +1331,19 @@ static httpd_handle_t start_webserver(void)
 
 static void keyboard_cb(keyboard_btn_handle_t kbd_handle, keyboard_btn_report_t kbd_report, void *user_data)
 {
-    ESP_LOGI(TAG, "keyboard_cb: pressed=%ld, released=%ld, changed=%d", 
-             kbd_report.key_pressed_num, kbd_report.key_release_num, kbd_report.key_change_num);
+    ESP_LOGI(TAG, "keyboard_cb: pressed=%ld, released=%ld, changed=%d", kbd_report.key_pressed_num,
+             kbd_report.key_release_num, kbd_report.key_change_num);
 
-    if (rgb_matrix_get_suspend_state() == true && g_device_status.left_key_color == 0x000000 && g_device_status.right_key_color == 0x000000) 
-    {
+    if (rgb_matrix_get_suspend_state() == true && g_device_status.left_key_color == 0x000000 &&
+        g_device_status.right_key_color == 0x000000) {
         rgb_matrix_set_suspend_state(false);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
     // 更新按键状态
-    g_device_status.left_key_pressed = false;
+    g_device_status.left_key_pressed  = false;
     g_device_status.right_key_pressed = false;
-    
+
     // 检查当前按下的按键
     for (int i = 0; i < kbd_report.key_pressed_num; i++) {
         uint8_t input_index = kbd_report.key_data[i].input_index;
@@ -1365,7 +1360,8 @@ static void keyboard_cb(keyboard_btn_handle_t kbd_handle, keyboard_btn_report_t 
     /*!< Lighting with key pressed */
     if (kbd_report.key_change_num > 0) {
         for (int i = 1; i <= kbd_report.key_change_num; i++) {
-            process_rgb_matrix(kbd_report.key_data[kbd_report.key_pressed_num - i].output_index, kbd_report.key_data[kbd_report.key_pressed_num - i].input_index, true);
+            process_rgb_matrix(kbd_report.key_data[kbd_report.key_pressed_num - i].output_index,
+                               kbd_report.key_data[kbd_report.key_pressed_num - i].input_index, true);
         }
     }
 
@@ -1395,10 +1391,10 @@ static void light_progress_task(void *pvParameters)
 void adc_switch_task(void *pvParameters)
 {
     adc_oneshot_unit_handle_t handle = (adc_oneshot_unit_handle_t)pvParameters;
-    int adc_value[2] = {0};
-    sys_param_t *sys_param = settings_get_parameter();
-    btn_report_type_t report_type = sys_param->report_type;
-    report_type = ALL_REPORT; // 默认打印按键 不report kb功能
+    int adc_value[2]                 = {0};
+    sys_param_t *sys_param           = settings_get_parameter();
+    btn_report_type_t report_type    = sys_param->report_type;
+    report_type                      = ALL_REPORT;  // 默认打印按键 不report kb功能
     while (1) {
         adc_oneshot_read(handle, KBD_ADC_SWITCH_BLE_CHAN, &adc_value[0]);
         adc_oneshot_read(handle, KBD_ADC_SWITCH_RAINMAKER_CHAN, &adc_value[1]);
@@ -1418,14 +1414,14 @@ void adc_switch_task(void *pvParameters)
         if (report_type != sys_param->report_type) {
             sys_param->report_type = report_type;
             settings_write_parameter_to_nvs();
-            
+
             // 拨码开关位置改变时，发送立即刷新指令
             if (status_refresh_queue) {
                 status_refresh_type_t refresh_msg = STATUS_REFRESH_IMMEDIATE;
                 xQueueSend(status_refresh_queue, &refresh_msg, 0);
                 ESP_LOGI(TAG, "Sent immediate status refresh request due to DIP switch change");
             }
-            
+
             // esp_restart();
         }
 
@@ -1442,9 +1438,9 @@ void adc_switch_task(void *pvParameters)
  */
 static void button_event_cb(void *button_handle, void *usr_data)
 {
-    button_handle_t btn = (button_handle_t)button_handle;
+    button_handle_t btn  = (button_handle_t)button_handle;
     button_event_t event = iot_button_get_event(btn);
-    uint32_t ticks = iot_button_get_ticks_time(btn);
+    uint32_t ticks       = iot_button_get_ticks_time(btn);
     if (event == BUTTON_LONG_PRESS_HOLD) {
         if (ticks >= 4000 && ticks <= 7000) {
             ESP_LOGI(TAG, "button_long_press_hold");
@@ -1478,7 +1474,7 @@ static void button_event_cb(void *button_handle, void *usr_data)
             iot_button_stop();
         }
         ESP_LOGI(TAG, "button_long_press_up");
-    } else if (event ==  BUTTON_LONG_PRESS_START) {
+    } else if (event == BUTTON_LONG_PRESS_START) {
         if (ticks >= 6900) {
             rgb_matrix_set_suspend_state(false);
             iot_button_stop();
@@ -1493,13 +1489,13 @@ void app_dual_button_init(void)
 {
     /*!< Init reset/reconfig event */
     const button_config_t btn_cfg = {
-        .long_press_time = 4000,
+        .long_press_time  = 4000,
         .short_press_time = 0,
     };
     button_dual_config_t dual_cfg = {
-        .active_level = KBD_ATTIVE_LEVEL,
-        .gpio_num = KBD_INPUT_IOS,
-        .disable_pull = 0,
+        .active_level   = KBD_ATTIVE_LEVEL,
+        .gpio_num       = KBD_INPUT_IOS,
+        .disable_pull   = 0,
         .skip_gpio_init = true,
     };
     button_handle_t btn = NULL;
@@ -1513,10 +1509,9 @@ void app_dual_button_init(void)
 }
 
 // 计算DualKey配置的CRC32
-static uint32_t dualkey_config_calculate_crc(const dualkey_saved_config_t* config)
+static uint32_t dualkey_config_calculate_crc(const dualkey_saved_config_t *config)
 {
-    return esp_crc32_le(0, (const uint8_t*)config, 
-                        sizeof(dualkey_saved_config_t) - sizeof(uint32_t));
+    return esp_crc32_le(0, (const uint8_t *)config, sizeof(dualkey_saved_config_t) - sizeof(uint32_t));
 }
 
 // 保存DualKey配置到NVS
@@ -1528,18 +1523,18 @@ static esp_err_t dualkey_config_save(void)
         ESP_LOGE(TAG, "打开DualKey配置NVS失败: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     dualkey_saved_config_t config;
     memset(&config, 0, sizeof(config));
-    
+
     // 填充配置数据
-    config.left_key_color = g_device_status.left_key_color;
-    config.right_key_color = g_device_status.right_key_color;
+    config.left_key_color      = g_device_status.left_key_color;
+    config.right_key_color     = g_device_status.right_key_color;
     config.current_key_mapping = g_device_status.current_key_mapping;
     config.usb_mapping_enabled = g_usb_mapping_enabled;
     config.ble_mapping_enabled = g_ble_mapping_enabled;
-    config.crc32 = dualkey_config_calculate_crc(&config);
-    
+    config.crc32               = dualkey_config_calculate_crc(&config);
+
     // 保存到NVS
     ret = nvs_set_blob(nvs_handle, "config", &config, sizeof(config));
     if (ret != ESP_OK) {
@@ -1547,18 +1542,18 @@ static esp_err_t dualkey_config_save(void)
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     ret = nvs_commit(nvs_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "提交DualKey配置失败: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     nvs_close(nvs_handle);
-    ESP_LOGI(TAG, "DualKey配置已保存: 左键颜色=0x%06lX, 右键颜色=0x%06lX, 映射=%d", 
-             config.left_key_color, config.right_key_color, config.current_key_mapping);
-    
+    ESP_LOGI(TAG, "DualKey配置已保存: 左键颜色=0x%06lX, 右键颜色=0x%06lX, 映射=%d", config.left_key_color,
+             config.right_key_color, config.current_key_mapping);
+
     return ESP_OK;
 }
 
@@ -1575,23 +1570,23 @@ static esp_err_t dualkey_config_load(void)
         ESP_LOGE(TAG, "打开DualKey配置NVS失败: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     dualkey_saved_config_t config;
     size_t required_size = sizeof(config);
-    
+
     ret = nvs_get_blob(nvs_handle, "config", &config, &required_size);
     if (ret == ESP_ERR_NVS_NOT_FOUND) {
         ESP_LOGI(TAG, "DualKey配置未找到，使用默认配置");
         nvs_close(nvs_handle);
         return ESP_ERR_NOT_FOUND;
     }
-    
+
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "读取DualKey配置失败: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     // 验证CRC
     uint32_t calculated_crc = dualkey_config_calculate_crc(&config);
     if (calculated_crc != config.crc32) {
@@ -1599,17 +1594,17 @@ static esp_err_t dualkey_config_load(void)
         nvs_close(nvs_handle);
         return ESP_ERR_INVALID_CRC;
     }
-    
+
     // 应用配置
-    g_device_status.left_key_color = config.left_key_color;
-    g_device_status.right_key_color = config.right_key_color;
+    g_device_status.left_key_color      = config.left_key_color;
+    g_device_status.right_key_color     = config.right_key_color;
     g_device_status.current_key_mapping = config.current_key_mapping;
-    g_usb_mapping_enabled = config.usb_mapping_enabled;
-    g_ble_mapping_enabled = config.ble_mapping_enabled;
-    
+    g_usb_mapping_enabled               = config.usb_mapping_enabled;
+    g_ble_mapping_enabled               = config.ble_mapping_enabled;
+
     // 应用按键映射
     btn_progress_set_key_mapping(config.current_key_mapping);
-    
+
     // 应用RGB颜色
     vTaskDelay(10 / portTICK_PERIOD_MS);
     if (config.left_key_color != 0x000000 || config.right_key_color != 0x000000) {
@@ -1618,28 +1613,27 @@ static esp_err_t dualkey_config_load(void)
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
         for (int i = 0; i < 2; i++) {
-            set_key_rgb_color(1, config.left_key_color);  // 左键 LED index 1
-            set_key_rgb_color(0, config.right_key_color); // 右键 LED index 0
+            set_key_rgb_color(1, config.left_key_color);   // 左键 LED index 1
+            set_key_rgb_color(0, config.right_key_color);  // 右键 LED index 0
             vTaskDelay(10 / portTICK_PERIOD_MS);
         }
     }
-    
+
     nvs_close(nvs_handle);
-    ESP_LOGI(TAG, "DualKey配置已加载: 左键颜色=0x%06lX, 右键颜色=0x%06lX, 映射=%d", 
-             config.left_key_color, config.right_key_color, config.current_key_mapping);
-    
+    ESP_LOGI(TAG, "DualKey配置已加载: 左键颜色=0x%06lX, 右键颜色=0x%06lX, 映射=%d", config.left_key_color,
+             config.right_key_color, config.current_key_mapping);
+
     return ESP_OK;
 }
 
 // 计算WiFi配置的CRC32
-static uint32_t wifi_config_calculate_crc(const wifi_config_saved_t* config)
+static uint32_t wifi_config_calculate_crc(const wifi_config_saved_t *config)
 {
-    return esp_crc32_le(0, (const uint8_t*)config, 
-                        sizeof(wifi_config_saved_t) - sizeof(uint32_t));
+    return esp_crc32_le(0, (const uint8_t *)config, sizeof(wifi_config_saved_t) - sizeof(uint32_t));
 }
 
 // 保存WiFi配置到NVS
-static esp_err_t wifi_config_save(const wifi_config_saved_t* config)
+static esp_err_t wifi_config_save(const wifi_config_saved_t *config)
 {
     nvs_handle_t nvs_handle;
     esp_err_t ret = nvs_open("wifi_cfg", NVS_READWRITE, &nvs_handle);
@@ -1647,11 +1641,11 @@ static esp_err_t wifi_config_save(const wifi_config_saved_t* config)
         ESP_LOGE(TAG, "打开WiFi配置NVS失败: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     wifi_config_saved_t cfg_to_save;
     memcpy(&cfg_to_save, config, sizeof(wifi_config_saved_t));
     cfg_to_save.crc32 = wifi_config_calculate_crc(&cfg_to_save);
-    
+
     // 保存到NVS
     ret = nvs_set_blob(nvs_handle, "config", &cfg_to_save, sizeof(cfg_to_save));
     if (ret != ESP_OK) {
@@ -1659,23 +1653,22 @@ static esp_err_t wifi_config_save(const wifi_config_saved_t* config)
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     ret = nvs_commit(nvs_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "提交WiFi配置失败: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     nvs_close(nvs_handle);
-    ESP_LOGI(TAG, "WiFi配置已保存: SSID=%s, 静态IP=%s", 
-             cfg_to_save.ssid, cfg_to_save.use_static_ip ? "启用" : "禁用");
-    
+    ESP_LOGI(TAG, "WiFi配置已保存: SSID=%s, 静态IP=%s", cfg_to_save.ssid, cfg_to_save.use_static_ip ? "启用" : "禁用");
+
     return ESP_OK;
 }
 
 // 从NVS加载WiFi配置
-static esp_err_t wifi_config_load(wifi_config_saved_t* config)
+static esp_err_t wifi_config_load(wifi_config_saved_t *config)
 {
     nvs_handle_t nvs_handle;
     esp_err_t ret = nvs_open("wifi_cfg", NVS_READONLY, &nvs_handle);
@@ -1687,22 +1680,22 @@ static esp_err_t wifi_config_load(wifi_config_saved_t* config)
         ESP_LOGE(TAG, "打开WiFi配置NVS失败: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     size_t required_size = sizeof(wifi_config_saved_t);
-    
+
     ret = nvs_get_blob(nvs_handle, "config", config, &required_size);
     if (ret == ESP_ERR_NVS_NOT_FOUND) {
         ESP_LOGI(TAG, "WiFi配置未找到");
         nvs_close(nvs_handle);
         return ESP_ERR_NOT_FOUND;
     }
-    
+
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "读取WiFi配置失败: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     // 验证CRC
     uint32_t calculated_crc = wifi_config_calculate_crc(config);
     if (calculated_crc != config->crc32) {
@@ -1710,10 +1703,10 @@ static esp_err_t wifi_config_load(wifi_config_saved_t* config)
         nvs_close(nvs_handle);
         return ESP_ERR_INVALID_CRC;
     }
-    
+
     nvs_close(nvs_handle);
     ESP_LOGI(TAG, "WiFi配置已加载: SSID=%s", config->ssid);
-    
+
     return ESP_OK;
 }
 
@@ -1726,7 +1719,7 @@ static esp_err_t wifi_config_reset(void)
         ESP_LOGE(TAG, "打开WiFi配置NVS失败: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 删除配置
     ret = nvs_erase_key(nvs_handle, "config");
     if (ret != ESP_OK && ret != ESP_ERR_NVS_NOT_FOUND) {
@@ -1734,23 +1727,22 @@ static esp_err_t wifi_config_reset(void)
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     ret = nvs_commit(nvs_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "提交WiFi配置删除失败: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return ret;
     }
-    
+
     nvs_close(nvs_handle);
     ESP_LOGI(TAG, "WiFi配置已重置");
-    
+
     return ESP_OK;
 }
 
 void app_main(void)
 {
-
     // 创建状态刷新消息队列
     status_refresh_queue = xQueueCreate(10, sizeof(status_refresh_type_t));
     if (status_refresh_queue == NULL) {
@@ -1775,7 +1767,7 @@ void app_main(void)
     bsp_adc_switch_init();
     bsp_adc_charge_monitor_init();
     adc_oneshot_unit_handle_t handle = NULL;
-    ret = bsp_get_adc_handle(&handle);
+    ret                              = bsp_get_adc_handle(&handle);
     assert(ret == ESP_OK);
     xTaskCreate(adc_switch_task, "adc_switch_task", 4096, handle, 5, NULL);
 
@@ -1797,7 +1789,7 @@ void app_main(void)
     /*!< Init keyboard key monitor */
     bsp_keyboard_init(&kbd_handle, NULL);
     keyboard_btn_cb_config_t cb_cfg = {
-        .event = KBD_EVENT_PRESSED,
+        .event    = KBD_EVENT_PRESSED,
         .callback = keyboard_cb,
     };
     keyboard_button_register_cb(kbd_handle, cb_cfg, NULL);
@@ -1825,7 +1817,7 @@ void app_main(void)
 
     // 启动web服务器
     start_webserver();
-    
+
     // 启动WebSocket状态更新任务
     xTaskCreate(websocket_task, "websocket_task", 4096, NULL, 5, &websocket_task_handle);
 
@@ -1846,12 +1838,10 @@ void app_main(void)
     }
 
     while (1) {
-        if (g_device_status.bluetooth_connected) 
-        {
+        if (g_device_status.bluetooth_connected) {
             ble_hid_set_battery(g_battery_percentage);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
-
 }

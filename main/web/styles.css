@@ -99,7 +99,8 @@ body {
     font-size: 0.9rem;
 }
 
-.websocket-status, .last-update-status {
+.websocket-status,
+.last-update-status {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -133,8 +134,15 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .status-text {
@@ -515,15 +523,15 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.switch input:checked + .switch-slider {
+.switch input:checked+.switch-slider {
     background-color: #3b82f6;
 }
 
-.switch input:checked + .switch-slider:before {
+.switch input:checked+.switch-slider:before {
     transform: translateX(22px);
 }
 
-.switch input:disabled + .switch-slider {
+.switch input:disabled+.switch-slider {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -1052,39 +1060,39 @@ body {
         padding: 20px;
         margin-bottom: 20px;
     }
-    
+
     .bus-container {
         flex-direction: column;
         gap: 30px;
         min-height: auto;
         padding: 10px 0;
     }
-    
+
     .bus-side {
         width: 100%;
         padding: 0 !important;
         align-items: center !important;
     }
-    
+
     .bus-devices {
         align-items: center !important;
         max-width: 100%;
     }
-    
+
     .chain-device-visual {
         max-width: 200px;
     }
-    
+
     .central-device {
         padding: 0;
         order: -1;
     }
-    
+
     .central-device-image {
         width: 100px;
         height: 100px;
     }
-    
+
     .bus-side::before {
         display: none;
     }
@@ -1377,6 +1385,7 @@ body {
         background: #fff3cd;
         border-left-color: #ffc107;
     }
+
     100% {
         background: #d4edda;
         border-left-color: #28a745;
@@ -1514,8 +1523,13 @@ body {
 
 /* 设备状态动画 */
 @keyframes deviceUpdate {
-    0% { background-color: #fff3cd; }
-    100% { background-color: #f8f9fa; }
+    0% {
+        background-color: #fff3cd;
+    }
+
+    100% {
+        background-color: #f8f9fa;
+    }
 }
 
 .device-item.updating {
@@ -1567,11 +1581,11 @@ body {
     border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
     background-color: #007bff;
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
     transform: translateX(20px);
 }
 
@@ -1586,57 +1600,58 @@ input:checked + .toggle-slider:before {
     .container {
         padding: 15px;
     }
-    
+
     .header {
         flex-direction: column;
         gap: 20px;
         text-align: center;
     }
-    
+
     .header h1 {
         font-size: 2rem;
     }
-    
+
     .header-status {
         align-items: center;
         gap: 12px;
     }
-    
-    .websocket-status, .last-update-status {
+
+    .websocket-status,
+    .last-update-status {
         flex-direction: column;
         gap: 4px;
         text-align: center;
     }
-    
+
     .dualkey-grid,
     .chainbus-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
 
-    
+
     .control-buttons {
         grid-template-columns: 1fr;
     }
-    
+
     .single-switch {
         width: 100px;
         height: 35px;
     }
-    
+
     .dip-switch-slider {
         width: 29px;
         height: 29px;
     }
-    
+
     .dip-switch-slider.center {
         left: 35px;
     }
-    
+
     .dip-switch-slider.right {
         left: 67px;
     }
-    
+
     .switch-labels {
         width: 100px;
     }
@@ -1846,4 +1861,3 @@ input:checked + .toggle-slider:before {
         align-items: center;
     }
 }
-

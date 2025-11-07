@@ -21,27 +21,27 @@ typedef enum {
 } btn_report_type_t;
 
 typedef struct {
-    uint32_t report_id;    // Report identifier
+    uint32_t report_id;  // Report identifier
     union {
         struct {
-            uint8_t modifier;     // Modifier keys
-            uint8_t reserved;     // Reserved byte
-            uint8_t keycode[15];  // Keycode
+            uint8_t modifier;        // Modifier keys
+            uint8_t reserved;        // Reserved byte
+            uint8_t keycode[15];     // Keycode
         } keyboard_full_key_report;  // Keyboard full key report
         struct {
-            uint8_t modifier;   // Modifier keys
-            uint8_t reserved;   // Reserved byte
-            uint8_t keycode[6]; // Keycodes
-        } keyboard_report;  // Keyboard report
+            uint8_t modifier;    // Modifier keys
+            uint8_t reserved;    // Reserved byte
+            uint8_t keycode[6];  // Keycodes
+        } keyboard_report;       // Keyboard report
         struct {
-            uint16_t keycode;    // Keycode
+            uint16_t keycode;  // Keycode
         } consumer_report;
         struct {
             uint8_t buttons; /**< buttons mask for currently pressed buttons in the mouse. */
-            int8_t  x;       /**< Current delta x movement of the mouse. */
-            int8_t  y;       /**< Current delta y movement on the mouse. */
-            int8_t  wheel;   /**< Current delta wheel movement on the mouse. */
-            int8_t  pan;     // using AC Pan
+            int8_t x;        /**< Current delta x movement of the mouse. */
+            int8_t y;        /**< Current delta y movement on the mouse. */
+            int8_t wheel;    /**< Current delta wheel movement on the mouse. */
+            int8_t pan;      // using AC Pan
         } mouse_report;
     };
 } hid_report_t;

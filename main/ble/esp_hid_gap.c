@@ -21,8 +21,8 @@ static const char *TAG = "ESP_HID_GAP";
 extern int g_connect_status;
 
 // uncomment to print all devices that were seen during a scan
-#define GAP_DBG_PRINTF(...) //printf(__VA_ARGS__)
-//static const char * gap_bt_prop_type_names[5] = {"","BDNAME","COD","RSSI","EIR"};
+#define GAP_DBG_PRINTF(...)  // printf(__VA_ARGS__)
+// static const char * gap_bt_prop_type_names[5] = {"","BDNAME","COD","RSSI","EIR"};
 
 static SemaphoreHandle_t bt_hidh_cb_semaphore = NULL;
 #define WAIT_BT_CB() xSemaphoreTake(bt_hidh_cb_semaphore, portMAX_DELAY)
@@ -32,10 +32,39 @@ static SemaphoreHandle_t ble_hidh_cb_semaphore = NULL;
 #define WAIT_BLE_CB() xSemaphoreTake(ble_hidh_cb_semaphore, portMAX_DELAY)
 #define SEND_BLE_CB() xSemaphoreGive(ble_hidh_cb_semaphore)
 
-#define SIZEOF_ARRAY(a) (sizeof(a)/sizeof(*a))
+#define SIZEOF_ARRAY(a) (sizeof(a) / sizeof(*a))
 
-static const char *ble_gap_evt_names[] = { "ADV_DATA_SET_COMPLETE", "SCAN_RSP_DATA_SET_COMPLETE", "SCAN_PARAM_SET_COMPLETE", "SCAN_RESULT", "ADV_DATA_RAW_SET_COMPLETE", "SCAN_RSP_DATA_RAW_SET_COMPLETE", "ADV_START_COMPLETE", "SCAN_START_COMPLETE", "AUTH_CMPL", "KEY", "SEC_REQ", "PASSKEY_NOTIF", "PASSKEY_REQ", "OOB_REQ", "LOCAL_IR", "LOCAL_ER", "NC_REQ", "ADV_STOP_COMPLETE", "SCAN_STOP_COMPLETE", "SET_STATIC_RAND_ADDR", "UPDATE_CONN_PARAMS", "SET_PKT_LENGTH_COMPLETE", "SET_LOCAL_PRIVACY_COMPLETE", "REMOVE_BOND_DEV_COMPLETE", "CLEAR_BOND_DEV_COMPLETE", "GET_BOND_DEV_COMPLETE", "READ_RSSI_COMPLETE", "UPDATE_WHITELIST_COMPLETE"};
-static const char *bt_gap_evt_names[] = { "DISC_RES", "DISC_STATE_CHANGED", "RMT_SRVCS", "RMT_SRVC_REC", "AUTH_CMPL", "PIN_REQ", "CFM_REQ", "KEY_NOTIF", "KEY_REQ", "READ_RSSI_DELTA"};
+static const char *ble_gap_evt_names[] = {"ADV_DATA_SET_COMPLETE",
+                                          "SCAN_RSP_DATA_SET_COMPLETE",
+                                          "SCAN_PARAM_SET_COMPLETE",
+                                          "SCAN_RESULT",
+                                          "ADV_DATA_RAW_SET_COMPLETE",
+                                          "SCAN_RSP_DATA_RAW_SET_COMPLETE",
+                                          "ADV_START_COMPLETE",
+                                          "SCAN_START_COMPLETE",
+                                          "AUTH_CMPL",
+                                          "KEY",
+                                          "SEC_REQ",
+                                          "PASSKEY_NOTIF",
+                                          "PASSKEY_REQ",
+                                          "OOB_REQ",
+                                          "LOCAL_IR",
+                                          "LOCAL_ER",
+                                          "NC_REQ",
+                                          "ADV_STOP_COMPLETE",
+                                          "SCAN_STOP_COMPLETE",
+                                          "SET_STATIC_RAND_ADDR",
+                                          "UPDATE_CONN_PARAMS",
+                                          "SET_PKT_LENGTH_COMPLETE",
+                                          "SET_LOCAL_PRIVACY_COMPLETE",
+                                          "REMOVE_BOND_DEV_COMPLETE",
+                                          "CLEAR_BOND_DEV_COMPLETE",
+                                          "GET_BOND_DEV_COMPLETE",
+                                          "READ_RSSI_COMPLETE",
+                                          "UPDATE_WHITELIST_COMPLETE"};
+static const char *bt_gap_evt_names[]  = {
+    "DISC_RES", "DISC_STATE_CHANGED", "RMT_SRVCS", "RMT_SRVC_REC",   "AUTH_CMPL", "PIN_REQ",
+    "CFM_REQ",  "KEY_NOTIF",          "KEY_REQ",   "READ_RSSI_DELTA"};
 static const char *ble_addr_type_names[] = {"PUBLIC", "RANDOM", "RPA_PUBLIC", "RPA_RANDOM"};
 
 const char *ble_addr_type_str(esp_ble_addr_type_t ble_addr_type)
@@ -66,37 +95,36 @@ const char *esp_ble_key_type_str(esp_ble_key_type_t key_type)
 {
     const char *key_str = NULL;
     switch (key_type) {
-    case ESP_LE_KEY_NONE:
-        key_str = "ESP_LE_KEY_NONE";
-        break;
-    case ESP_LE_KEY_PENC:
-        key_str = "ESP_LE_KEY_PENC";
-        break;
-    case ESP_LE_KEY_PID:
-        key_str = "ESP_LE_KEY_PID";
-        break;
-    case ESP_LE_KEY_PCSRK:
-        key_str = "ESP_LE_KEY_PCSRK";
-        break;
-    case ESP_LE_KEY_PLK:
-        key_str = "ESP_LE_KEY_PLK";
-        break;
-    case ESP_LE_KEY_LLK:
-        key_str = "ESP_LE_KEY_LLK";
-        break;
-    case ESP_LE_KEY_LENC:
-        key_str = "ESP_LE_KEY_LENC";
-        break;
-    case ESP_LE_KEY_LID:
-        key_str = "ESP_LE_KEY_LID";
-        break;
-    case ESP_LE_KEY_LCSRK:
-        key_str = "ESP_LE_KEY_LCSRK";
-        break;
-    default:
-        key_str = "INVALID BLE KEY TYPE";
-        break;
-
+        case ESP_LE_KEY_NONE:
+            key_str = "ESP_LE_KEY_NONE";
+            break;
+        case ESP_LE_KEY_PENC:
+            key_str = "ESP_LE_KEY_PENC";
+            break;
+        case ESP_LE_KEY_PID:
+            key_str = "ESP_LE_KEY_PID";
+            break;
+        case ESP_LE_KEY_PCSRK:
+            key_str = "ESP_LE_KEY_PCSRK";
+            break;
+        case ESP_LE_KEY_PLK:
+            key_str = "ESP_LE_KEY_PLK";
+            break;
+        case ESP_LE_KEY_LLK:
+            key_str = "ESP_LE_KEY_LLK";
+            break;
+        case ESP_LE_KEY_LENC:
+            key_str = "ESP_LE_KEY_LENC";
+            break;
+        case ESP_LE_KEY_LID:
+            key_str = "ESP_LE_KEY_LID";
+            break;
+        case ESP_LE_KEY_LCSRK:
+            key_str = "ESP_LE_KEY_LCSRK";
+            break;
+        default:
+            key_str = "INVALID BLE KEY TYPE";
+            break;
     }
     return key_str;
 }
@@ -104,126 +132,129 @@ const char *esp_ble_key_type_str(esp_ble_key_type_t key_type)
 static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event) {
-    /*
-     * SCAN
-     * */
-    case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-        ESP_LOGV(TAG, "BLE GAP EVENT SCAN_PARAM_SET_COMPLETE");
-        SEND_BLE_CB();
-        break;
-    }
-    case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-        esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
-        switch (scan_result->scan_rst.search_evt) {
-        case ESP_GAP_SEARCH_INQ_RES_EVT: {
-            ESP_LOGV(TAG, "BLE GAP EVENT SCAN_RESULT: %d", scan_result->scan_rst.num_resps);
-            break;
-        }
-        case ESP_GAP_SEARCH_INQ_CMPL_EVT:
-            ESP_LOGV(TAG, "BLE GAP EVENT SCAN DONE: %d", scan_result->scan_rst.num_resps);
+        /*
+         * SCAN
+         * */
+        case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+            ESP_LOGV(TAG, "BLE GAP EVENT SCAN_PARAM_SET_COMPLETE");
             SEND_BLE_CB();
             break;
-        default:
+        }
+        case ESP_GAP_BLE_SCAN_RESULT_EVT: {
+            esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
+            switch (scan_result->scan_rst.search_evt) {
+                case ESP_GAP_SEARCH_INQ_RES_EVT: {
+                    ESP_LOGV(TAG, "BLE GAP EVENT SCAN_RESULT: %d", scan_result->scan_rst.num_resps);
+                    break;
+                }
+                case ESP_GAP_SEARCH_INQ_CMPL_EVT:
+                    ESP_LOGV(TAG, "BLE GAP EVENT SCAN DONE: %d", scan_result->scan_rst.num_resps);
+                    SEND_BLE_CB();
+                    break;
+                default:
+                    break;
+            }
             break;
         }
-        break;
-    }
-    case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
-        ESP_LOGV(TAG, "BLE GAP EVENT SCAN CANCELED");
-        break;
-    }
-
-    /*
-     * ADVERTISEMENT
-     * */
-    case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        ESP_LOGV(TAG, "BLE GAP ADV_DATA_SET_COMPLETE");
-        break;
-
-    case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-        ESP_LOGV(TAG, "BLE GAP ADV_START_COMPLETE");
-        if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS) {
-            ESP_LOGI(TAG, "BLE advertising started successfully");
-            // 广播开始时，连接状态重置为未连接
-            g_connect_status = 0;
-        } else {
-            ESP_LOGE(TAG, "BLE advertising start failed: %d", param->adv_start_cmpl.status);
+        case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
+            ESP_LOGV(TAG, "BLE GAP EVENT SCAN CANCELED");
+            break;
         }
-        break;
 
-    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
-        ESP_LOGV(TAG, "BLE GAP ADV_STOP_COMPLETE");
-        if (param->adv_stop_cmpl.status == ESP_BT_STATUS_SUCCESS) {
-            ESP_LOGI(TAG, "BLE advertising stopped successfully");
-            // 广播停止时，如果当前未连接，则保持未连接状态
-            if (g_connect_status == 0) {
-                g_connect_status = 0; // 保持未连接状态
+        /*
+         * ADVERTISEMENT
+         * */
+        case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
+            ESP_LOGV(TAG, "BLE GAP ADV_DATA_SET_COMPLETE");
+            break;
+
+        case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
+            ESP_LOGV(TAG, "BLE GAP ADV_START_COMPLETE");
+            if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS) {
+                ESP_LOGI(TAG, "BLE advertising started successfully");
+                // 广播开始时，连接状态重置为未连接
+                g_connect_status = 0;
+            } else {
+                ESP_LOGE(TAG, "BLE advertising start failed: %d", param->adv_start_cmpl.status);
             }
-        } else {
-            ESP_LOGE(TAG, "BLE advertising stop failed: %d", param->adv_stop_cmpl.status);
-        }
-        break;
+            break;
 
-    /*
-     * AUTHENTICATION
-     * */
-    case ESP_GAP_BLE_AUTH_CMPL_EVT:
-        if (!param->ble_security.auth_cmpl.success) {
-            // if AUTH ERROR,hid maybe don't work.
-            ESP_LOGE(TAG, "BLE GAP AUTH ERROR: 0x%x", param->ble_security.auth_cmpl.fail_reason);
-            g_connect_status = 0; // 认证失败，连接失败
-        } else {
-            ESP_LOGI(TAG, "BLE GAP AUTH SUCCESS");
-            g_connect_status = 2; // 认证成功，连接建立
-        }
-        // ble_hid_task_start_up();
-        break;
+        case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
+            ESP_LOGV(TAG, "BLE GAP ADV_STOP_COMPLETE");
+            if (param->adv_stop_cmpl.status == ESP_BT_STATUS_SUCCESS) {
+                ESP_LOGI(TAG, "BLE advertising stopped successfully");
+                // 广播停止时，如果当前未连接，则保持未连接状态
+                if (g_connect_status == 0) {
+                    g_connect_status = 0;  // 保持未连接状态
+                }
+            } else {
+                ESP_LOGE(TAG, "BLE advertising stop failed: %d", param->adv_stop_cmpl.status);
+            }
+            break;
 
-    case ESP_GAP_BLE_KEY_EVT: //shows the ble key info share with peer device to the user.
-        ESP_LOGI(TAG, "BLE GAP KEY type = %s", esp_ble_key_type_str(param->ble_security.ble_key.key_type));
-        break;
+        /*
+         * AUTHENTICATION
+         * */
+        case ESP_GAP_BLE_AUTH_CMPL_EVT:
+            if (!param->ble_security.auth_cmpl.success) {
+                // if AUTH ERROR,hid maybe don't work.
+                ESP_LOGE(TAG, "BLE GAP AUTH ERROR: 0x%x", param->ble_security.auth_cmpl.fail_reason);
+                g_connect_status = 0;  // 认证失败，连接失败
+            } else {
+                ESP_LOGI(TAG, "BLE GAP AUTH SUCCESS");
+                g_connect_status = 2;  // 认证成功，连接建立
+            }
+            // ble_hid_task_start_up();
+            break;
 
-    case ESP_GAP_BLE_PASSKEY_NOTIF_EVT: // ESP_IO_CAP_OUT
-        // The app will receive this evt when the IO has Output capability and the peer device IO has Input capability.
-        // Show the passkey number to the user to input it in the peer device.
-        ESP_LOGI(TAG, "BLE GAP PASSKEY_NOTIF passkey:%"PRIu32, param->ble_security.key_notif.passkey);
-        break;
+        case ESP_GAP_BLE_KEY_EVT:  // shows the ble key info share with peer device to the user.
+            ESP_LOGI(TAG, "BLE GAP KEY type = %s", esp_ble_key_type_str(param->ble_security.ble_key.key_type));
+            break;
 
-    case ESP_GAP_BLE_NC_REQ_EVT: // ESP_IO_CAP_IO
-        // The app will receive this event when the IO has DisplayYesNO capability and the peer device IO also has DisplayYesNo capability.
-        // show the passkey number to the user to confirm it with the number displayed by peer device.
-        ESP_LOGI(TAG, "BLE GAP NC_REQ passkey:%"PRIu32, param->ble_security.key_notif.passkey);
-        esp_ble_confirm_reply(param->ble_security.key_notif.bd_addr, true);
-        break;
+        case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  // ESP_IO_CAP_OUT
+            // The app will receive this evt when the IO has Output capability and the peer device IO has Input
+            // capability. Show the passkey number to the user to input it in the peer device.
+            ESP_LOGI(TAG, "BLE GAP PASSKEY_NOTIF passkey:%" PRIu32, param->ble_security.key_notif.passkey);
+            break;
 
-    case ESP_GAP_BLE_PASSKEY_REQ_EVT: // ESP_IO_CAP_IN
-        // The app will receive this evt when the IO has Input capability and the peer device IO has Output capability.
-        // See the passkey number on the peer device and send it back.
-        ESP_LOGI(TAG, "BLE GAP PASSKEY_REQ");
-        //esp_ble_passkey_reply(param->ble_security.ble_req.bd_addr, true, 1234);
-        break;
+        case ESP_GAP_BLE_NC_REQ_EVT:  // ESP_IO_CAP_IO
+            // The app will receive this event when the IO has DisplayYesNO capability and the peer device IO also has
+            // DisplayYesNo capability. show the passkey number to the user to confirm it with the number displayed by
+            // peer device.
+            ESP_LOGI(TAG, "BLE GAP NC_REQ passkey:%" PRIu32, param->ble_security.key_notif.passkey);
+            esp_ble_confirm_reply(param->ble_security.key_notif.bd_addr, true);
+            break;
 
-    case ESP_GAP_BLE_SEC_REQ_EVT:
-        ESP_LOGI(TAG, "BLE GAP SEC_REQ");
-        // Send the positive(true) security response to the peer device to accept the security request.
-        // If not accept the security request, should send the security response with negative(false) accept value.
-        esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
-        // 安全请求表示有设备尝试连接
-        g_connect_status = 1; // 连接中
-        break;
-    case ESP_GAP_BLE_PHY_UPDATE_COMPLETE_EVT:
-        ESP_LOGI(TAG, "BLE GAP PHY_UPDATE_COMPLETE PHY: TX: %d RX: %d", param->phy_update.tx_phy, param->phy_update.rx_phy);
-        break;
-    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-        ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d", param->update_conn_params.min_int, param->update_conn_params.max_int);
-        // 连接参数更新通常表示连接已建立
-        if (g_connect_status == 0) {
-            g_connect_status = 1; // 连接中
-        }
-        break;
-    default:
-        ESP_LOGI(TAG, "BLE GAP EVENT %d", event);
-        break;
+        case ESP_GAP_BLE_PASSKEY_REQ_EVT:  // ESP_IO_CAP_IN
+            // The app will receive this evt when the IO has Input capability and the peer device IO has Output
+            // capability. See the passkey number on the peer device and send it back.
+            ESP_LOGI(TAG, "BLE GAP PASSKEY_REQ");
+            // esp_ble_passkey_reply(param->ble_security.ble_req.bd_addr, true, 1234);
+            break;
+
+        case ESP_GAP_BLE_SEC_REQ_EVT:
+            ESP_LOGI(TAG, "BLE GAP SEC_REQ");
+            // Send the positive(true) security response to the peer device to accept the security request.
+            // If not accept the security request, should send the security response with negative(false) accept value.
+            esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
+            // 安全请求表示有设备尝试连接
+            g_connect_status = 1;  // 连接中
+            break;
+        case ESP_GAP_BLE_PHY_UPDATE_COMPLETE_EVT:
+            ESP_LOGI(TAG, "BLE GAP PHY_UPDATE_COMPLETE PHY: TX: %d RX: %d", param->phy_update.tx_phy,
+                     param->phy_update.rx_phy);
+            break;
+        case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
+            ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d", param->update_conn_params.min_int,
+                     param->update_conn_params.max_int);
+            // 连接参数更新通常表示连接已建立
+            if (g_connect_status == 0) {
+                g_connect_status = 1;  // 连接中
+            }
+            break;
+        default:
+            ESP_LOGI(TAG, "BLE GAP EVENT %d", event);
+            break;
     }
 }
 
@@ -240,7 +271,6 @@ static esp_err_t init_ble_gap(void)
 
 esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance, const char *device_name)
 {
-
     esp_err_t ret;
 
     const uint8_t hidd_service_uuid128[] = {
@@ -248,30 +278,30 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance, const char *device_name)
     };
 
     esp_ble_adv_data_t ble_adv_data = {
-        .set_scan_rsp = false,
-        .include_name = true,
-        .include_txpower = true,
-        .min_interval = 0x0050, //slave connection min interval, Time = min_interval * 1.25 msec
-        .max_interval = 0x0050, //slave connection max interval, Time = max_interval * 1.25 msec
-        .appearance = appearance,
-        .manufacturer_len = 0,
-        .p_manufacturer_data =  NULL,
-        .service_data_len = 0,
-        .p_service_data = NULL,
-        .service_uuid_len = sizeof(hidd_service_uuid128),
-        .p_service_uuid = (uint8_t *)hidd_service_uuid128,
-        .flag = 0x6,
+        .set_scan_rsp        = false,
+        .include_name        = true,
+        .include_txpower     = true,
+        .min_interval        = 0x0050,  // slave connection min interval, Time = min_interval * 1.25 msec
+        .max_interval        = 0x0050,  // slave connection max interval, Time = max_interval * 1.25 msec
+        .appearance          = appearance,
+        .manufacturer_len    = 0,
+        .p_manufacturer_data = NULL,
+        .service_data_len    = 0,
+        .p_service_data      = NULL,
+        .service_uuid_len    = sizeof(hidd_service_uuid128),
+        .p_service_uuid      = (uint8_t *)hidd_service_uuid128,
+        .flag                = 0x6,
     };
 
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-    //esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;//you have to enter the key on the host
-    //esp_ble_io_cap_t iocap = ESP_IO_CAP_IN;//you have to enter the key on the device
-    esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;//you have to agree that key matches on both
-    //esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;//device is not capable of input or output, insecure
+    // esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;//you have to enter the key on the host
+    // esp_ble_io_cap_t iocap = ESP_IO_CAP_IN;//you have to enter the key on the device
+    esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;  // you have to agree that key matches on both
+    // esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;//device is not capable of input or output, insecure
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t key_size = 16; //the key size should be 7~16 bytes
-    uint32_t passkey = 1234;//ESP_IO_CAP_OUT
+    uint8_t rsp_key  = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint8_t key_size = 16;    // the key size should be 7~16 bytes
+    uint32_t passkey = 1234;  // ESP_IO_CAP_OUT
 
     if ((ret = esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, 1)) != ESP_OK) {
         ESP_LOGE(TAG, "GAP set_security_param AUTHEN_REQ_MODE failed: %d", ret);
@@ -318,12 +348,12 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance, const char *device_name)
 esp_err_t esp_hid_ble_gap_adv_start(void)
 {
     static esp_ble_adv_params_t hidd_adv_params = {
-        .adv_int_min        = 0x20,
-        .adv_int_max        = 0x30,
-        .adv_type           = ADV_TYPE_IND,
-        .own_addr_type      = BLE_ADDR_TYPE_PUBLIC,
-        .channel_map        = ADV_CHNL_ALL,
-        .adv_filter_policy  = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
+        .adv_int_min       = 0x20,
+        .adv_int_max       = 0x30,
+        .adv_type          = ADV_TYPE_IND,
+        .own_addr_type     = BLE_ADDR_TYPE_PUBLIC,
+        .channel_map       = ADV_CHNL_ALL,
+        .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
     };
     return esp_ble_gap_start_advertising(&hidd_adv_params);
 }
@@ -352,7 +382,7 @@ static esp_err_t init_low_level(void)
     }
 
     esp_bluedroid_config_t bluedroid_cfg = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-    ret = esp_bluedroid_init_with_cfg(&bluedroid_cfg);
+    ret                                  = esp_bluedroid_init_with_cfg(&bluedroid_cfg);
     if (ret) {
         ESP_LOGE(TAG, "esp_bluedroid_init failed: %d", ret);
         return ret;

@@ -34,7 +34,7 @@ static void usb_phy_init(void)
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
-        .otg_mode = USB_OTG_MODE_DEVICE,
+        .otg_mode   = USB_OTG_MODE_DEVICE,
     };
     phy_conf.target = USB_PHY_TARGET_INT;
     usb_new_phy(&phy_conf, &phy_hdl);
@@ -61,20 +61,20 @@ void tinyusb_hid_keyboard_report(hid_report_t report)
         tud_remote_wakeup();
     } else {
         switch (report.report_id) {
-        case REPORT_ID_FULL_KEY_KEYBOARD:
-            use_full_key = true;
-            break;
-        case REPORT_ID_KEYBOARD: {
-            if (use_full_key) {
-                hid_report_t _report = {0};
-                _report.report_id = REPORT_ID_FULL_KEY_KEYBOARD;
-                xQueueSend(s_tinyusb_hid->hid_queue, &_report, 0);
-                use_full_key = false;
+            case REPORT_ID_FULL_KEY_KEYBOARD:
+                use_full_key = true;
+                break;
+            case REPORT_ID_KEYBOARD: {
+                if (use_full_key) {
+                    hid_report_t _report = {0};
+                    _report.report_id    = REPORT_ID_FULL_KEY_KEYBOARD;
+                    xQueueSend(s_tinyusb_hid->hid_queue, &_report, 0);
+                    use_full_key = false;
+                }
+                break;
             }
-            break;
-        }
-        default:
-            break;
+            default:
+                break;
         }
 
         xQueueSend(s_tinyusb_hid->hid_queue, &report, 0);
@@ -84,7 +84,7 @@ void tinyusb_hid_keyboard_report(hid_report_t report)
 // tinyusb_hid_task function to process the HID reports
 static void tinyusb_hid_task(void *arg)
 {
-    (void) arg;
+    (void)arg;
     hid_report_t report;
     while (1) {
         if (xQueueReceive(s_tinyusb_hid->hid_queue, &report, portMAX_DELAY)) {
@@ -98,7 +98,8 @@ static void tinyusb_hid_task(void *arg)
                 if (report.report_id == REPORT_ID_KEYBOARD) {
                     tud_hid_n_report(0, REPORT_ID_KEYBOARD, &report.keyboard_report, sizeof(report.keyboard_report));
                 } else if (report.report_id == REPORT_ID_FULL_KEY_KEYBOARD) {
-                    tud_hid_n_report(0, REPORT_ID_FULL_KEY_KEYBOARD, &report.keyboard_full_key_report, sizeof(report.keyboard_full_key_report));
+                    tud_hid_n_report(0, REPORT_ID_FULL_KEY_KEYBOARD, &report.keyboard_full_key_report,
+                                     sizeof(report.keyboard_full_key_report));
                 } else if (report.report_id == REPORT_ID_CONSUMER) {
                     tud_hid_n_report(0, REPORT_ID_CONSUMER, &report.consumer_report, sizeof(report.consumer_report));
                 } else if (report.report_id == REPORT_ID_MOUSE) {
@@ -131,7 +132,8 @@ esp_err_t tinyusb_hid_init(void)
     usb_phy_init();
     tud_init(BOARD_TUD_RHPORT);
 
-    s_tinyusb_hid->hid_queue = xQueueCreate(10, sizeof(hid_report_t));   // Adjust queue length and item size as per your requirement
+    s_tinyusb_hid->hid_queue =
+        xQueueCreate(10, sizeof(hid_report_t));  // Adjust queue length and item size as per your requirement
     ESP_GOTO_ON_FALSE(s_tinyusb_hid->hid_queue, ESP_ERR_NO_MEM, fail, TAG, "xQueueCreate failed");
     xTaskCreate(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL);
     xTaskCreate(tinyusb_hid_task, "tinyusb_hid_task", 4096, NULL, 5, &s_tinyusb_hid->task_handle);
@@ -149,8 +151,8 @@ fail:
 // Note: For composite reports, report[0] is report ID
 void tud_hid_report_complete_cb(uint8_t itf, uint8_t const *report, uint16_t len)
 {
-    (void) itf;
-    (void) len;
+    (void)itf;
+    (void)len;
 
     xTaskNotifyGive(s_tinyusb_hid->task_handle);
 }
@@ -158,28 +160,30 @@ void tud_hid_report_complete_cb(uint8_t itf, uint8_t const *report, uint16_t len
 // Invoked when received GET_REPORT control request
 // Application must fill buffer report's content and return its length.
 // Return zero will cause the stack to STALL request
-uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
+uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer,
+                               uint16_t reqlen)
 {
     // TODO not Implemented
-    (void) itf;
-    (void) report_id;
-    (void) report_type;
-    (void) buffer;
-    (void) reqlen;
+    (void)itf;
+    (void)report_id;
+    (void)report_type;
+    (void)buffer;
+    (void)reqlen;
 
     return 0;
 }
 
 // Invoked when received SET_REPORT control request or
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
-void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize)
+void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer,
+                           uint16_t bufsize)
 {
     // TODO set LED based on CAPLOCK, NUMLOCK etc...
-    (void) itf;
-    (void) report_id;
-    (void) report_type;
-    (void) buffer;
-    (void) bufsize;
+    (void)itf;
+    (void)report_id;
+    (void)report_type;
+    (void)buffer;
+    (void)bufsize;
 }
 
 // Invoked when device is mounted
@@ -199,7 +203,7 @@ void tud_umount_cb(void)
 // Within 7ms, device must draw an average of current less than 2.5 mA from bus
 void tud_suspend_cb(bool remote_wakeup_en)
 {
-    (void) remote_wakeup_en;
+    (void)remote_wakeup_en;
     ESP_LOGI(TAG, "USB Suspend");
 }
 

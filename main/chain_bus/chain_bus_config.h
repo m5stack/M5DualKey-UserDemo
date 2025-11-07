@@ -14,10 +14,10 @@ extern "C" {
 
 // 设备配置存储结构
 typedef struct {
-    uint8_t uid[CHAIN_UID_SIZE];  // 设备UID
-    chain_device_type_t device_type;  // 设备类型
+    uint8_t uid[CHAIN_UID_SIZE];           // 设备UID
+    chain_device_type_t device_type;       // 设备类型
     chain_device_hid_config_t hid_config;  // HID配置
-    uint32_t crc32;  // CRC32校验
+    uint32_t crc32;                        // CRC32校验
 } chain_device_saved_config_t;
 
 /**
@@ -33,8 +33,8 @@ esp_err_t chain_bus_config_init(void);
  * @param hid_config HID配置
  * @return esp_err_t ESP_OK 成功
  */
-esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_type, 
-                                 const chain_device_hid_config_t* hid_config);
+esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_type,
+                                const chain_device_hid_config_t* hid_config);
 
 /**
  * @brief 从NVS加载设备配置
@@ -44,7 +44,7 @@ esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_t
  * @return esp_err_t ESP_OK 成功，ESP_ERR_NOT_FOUND 未找到配置
  */
 esp_err_t chain_bus_config_load(const uint8_t* uid, chain_device_type_t device_type,
-                                 chain_device_hid_config_t* hid_config);
+                                chain_device_hid_config_t* hid_config);
 
 /**
  * @brief 删除设备配置
@@ -76,5 +76,4 @@ void chain_bus_uid_to_string(const uint8_t* uid, char* str_buf);
 }
 #endif
 
-#endif // CHAIN_BUS_CONFIG_H
-
+#endif  // CHAIN_BUS_CONFIG_H

@@ -31,35 +31,35 @@ static const char *TAG = "test_case";
 static SemaphoreHandle_t led_mutex = NULL;
 
 // ADC检测配置
-#define ADC_BAT_GPIO        10  // 电池电压检测GPIO
-#define ADC_CHRG_GPIO       9   // 充电状态检测GPIO  
-#define ADC_VBUS_GPIO       2   // USB电压检测GPIO
+#define ADC_BAT_GPIO  10  // 电池电压检测GPIO
+#define ADC_CHRG_GPIO 9   // 充电状态检测GPIO
+#define ADC_VBUS_GPIO 2   // USB电压检测GPIO
 
-#define ADC_BAT_CHANNEL     ADC_CHANNEL_9   // GPIO10对应ADC1_CH9
-#define ADC_CHRG_CHANNEL    ADC_CHANNEL_8   // GPIO9对应ADC1_CH8
-#define ADC_VBUS_CHANNEL    ADC_CHANNEL_1   // GPIO2对应ADC1_CH1
+#define ADC_BAT_CHANNEL  ADC_CHANNEL_9  // GPIO10对应ADC1_CH9
+#define ADC_CHRG_CHANNEL ADC_CHANNEL_8  // GPIO9对应ADC1_CH8
+#define ADC_VBUS_CHANNEL ADC_CHANNEL_1  // GPIO2对应ADC1_CH1
 
-#define ADC_ATTEN           ADC_ATTEN_DB_11  // 衰减11dB, 测量范围0-3.3V
-#define ADC_BITWIDTH        ADC_BITWIDTH_12  // 12位精度
-#define ADC_SAMPLE_COUNT    64               // 采样次数，用于平均滤波
+#define ADC_ATTEN        ADC_ATTEN_DB_11  // 衰减11dB, 测量范围0-3.3V
+#define ADC_BITWIDTH     ADC_BITWIDTH_12  // 12位精度
+#define ADC_SAMPLE_COUNT 64               // 采样次数，用于平均滤波
 
 // 分压比例定义
-#define VOLTAGE_DIVIDER_RATIO_BAT   1.51f  // 电池检测: (51+100)/100 = 1.51
-#define VOLTAGE_DIVIDER_RATIO_VBUS  1.51f  // VBUS检测: (51+100)/100 = 1.51
-#define VREF_VOLTAGE          3333    // 参考电压3.3V (mV) Vbat*0.662
-#define ADC_MAX_VALUE         4095    // 12位ADC最大值
+#define VOLTAGE_DIVIDER_RATIO_BAT  1.51f  // 电池检测: (51+100)/100 = 1.51
+#define VOLTAGE_DIVIDER_RATIO_VBUS 1.51f  // VBUS检测: (51+100)/100 = 1.51
+#define VREF_VOLTAGE               3333   // 参考电压3.3V (mV) Vbat*0.662
+#define ADC_MAX_VALUE              4095   // 12位ADC最大值
 
 // 充电状态电压阈值 (mV)
-#define CHRG_NOT_CHARGING     3000    // 没充电：>3.0V
-#define CHRG_CHARGING         1400    // 充电中：1.4V-1.9V
-#define CHRG_CHARGED          1900    // 充满电：1.9V-3.0V
+#define CHRG_NOT_CHARGING 3000  // 没充电：>3.0V
+#define CHRG_CHARGING     1400  // 充电中：1.4V-1.9V
+#define CHRG_CHARGED      1900  // 充满电：1.9V-3.0V
 
 // ADC检测结果结构
 typedef struct {
     float battery_voltage;      // 电池电压 (V)
     float vbus_voltage;         // USB电压 (V)
     float chrg_voltage;         // 充电检测电压 (V)
-    const char* charge_status;  // 充电状态字符串
+    const char *charge_status;  // 充电状态字符串
     bool usb_connected;         // USB连接状态
     bool battery_low;           // 电池低电量标志
 } adc_result_t;
@@ -68,18 +68,19 @@ typedef struct {
 static adc_oneshot_unit_handle_t adc_handle = NULL;
 
 // 全局变量，供其他模块访问
-float g_battery_voltage = 3.7f;
-int g_charging_status = 0;
+float g_battery_voltage  = 3.7f;
+int g_charging_status    = 0;
 int g_battery_percentage = 75;
-bool g_usb_connected = false;
+bool g_usb_connected     = false;
 
 // 安全的LED操作函数
-static void safe_led_set_and_refresh(led_strip_handle_t led_strip, int index, uint8_t r, uint8_t g, uint8_t b, int delay_ms)
+static void safe_led_set_and_refresh(led_strip_handle_t led_strip, int index, uint8_t r, uint8_t g, uint8_t b,
+                                     int delay_ms)
 {
     if (led_mutex == NULL || led_strip == NULL) {
         return;
     }
-    
+
     if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         led_strip_set_pixel(led_strip, index, r, g, b);
         led_strip_refresh(led_strip);
@@ -92,39 +93,38 @@ static void safe_led_set_and_refresh(led_strip_handle_t led_strip, int index, ui
     }
 }
 
-
 // 初始化ADC
 static esp_err_t init_adc(adc_oneshot_unit_handle_t handle)
 {
     adc_handle = handle;
-    
+
     // 配置ADC通道
     adc_oneshot_chan_cfg_t config = {
         .bitwidth = ADC_BITWIDTH,
-        .atten = ADC_ATTEN,
+        .atten    = ADC_ATTEN,
     };
-    
+
     // 配置电池电压检测通道
     esp_err_t ret = adc_oneshot_config_channel(adc_handle, ADC_BAT_CHANNEL, &config);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to config battery ADC channel: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 配置充电状态检测通道
     ret = adc_oneshot_config_channel(adc_handle, ADC_CHRG_CHANNEL, &config);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to config charge ADC channel: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 配置USB电压检测通道
     ret = adc_oneshot_config_channel(adc_handle, ADC_VBUS_CHANNEL, &config);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to config VBUS ADC channel: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     ESP_LOGI(TAG, "ADC initialized successfully");
     return ESP_OK;
 }
@@ -132,19 +132,19 @@ static esp_err_t init_adc(adc_oneshot_unit_handle_t handle)
 // 多次采样并平均
 static int adc_read_average(adc_channel_t channel, int sample_count)
 {
-    int sum = 0;
+    int sum           = 0;
     int valid_samples = 0;
-    
+
     for (int i = 0; i < sample_count; i++) {
-        int adc_raw = 0;
+        int adc_raw   = 0;
         esp_err_t ret = adc_oneshot_read(adc_handle, channel, &adc_raw);
         if (ret == ESP_OK) {
             sum += adc_raw;
             valid_samples++;
         }
-        vTaskDelay(pdMS_TO_TICKS(1)); // 1ms延时
+        vTaskDelay(pdMS_TO_TICKS(1));  // 1ms延时
     }
-    
+
     if (valid_samples > 0) {
         return sum / valid_samples;
     }
@@ -158,7 +158,7 @@ static float adc_raw_to_voltage(int adc_raw)
 }
 
 // 获取充电状态字符串
-static const char* get_charge_status_string(float chrg_voltage_mv)
+static const char *get_charge_status_string(float chrg_voltage_mv)
 {
     if (chrg_voltage_mv > CHRG_NOT_CHARGING) {
         return "Not Charging";
@@ -175,24 +175,24 @@ static const char* get_charge_status_string(float chrg_voltage_mv)
 static adc_result_t perform_adc_detection(void)
 {
     adc_result_t result = {0};
-    
+
     // 读取电池电压
-    int bat_raw = adc_read_average(ADC_BAT_CHANNEL, ADC_SAMPLE_COUNT);
-    float bat_voltage_mv = adc_raw_to_voltage(bat_raw);
-    result.battery_voltage = bat_voltage_mv * VOLTAGE_DIVIDER_RATIO_BAT / 1000.0f; // 转换为V
-    result.battery_low = (result.battery_voltage < 3.2f); // 低于3.2V认为低电量
-    
+    int bat_raw            = adc_read_average(ADC_BAT_CHANNEL, ADC_SAMPLE_COUNT);
+    float bat_voltage_mv   = adc_raw_to_voltage(bat_raw);
+    result.battery_voltage = bat_voltage_mv * VOLTAGE_DIVIDER_RATIO_BAT / 1000.0f;  // 转换为V
+    result.battery_low     = (result.battery_voltage < 3.2f);                       // 低于3.2V认为低电量
+
     // 读取USB电压
-    int vbus_raw = adc_read_average(ADC_VBUS_CHANNEL, ADC_SAMPLE_COUNT);
+    int vbus_raw          = adc_read_average(ADC_VBUS_CHANNEL, ADC_SAMPLE_COUNT);
     float vbus_voltage_mv = adc_raw_to_voltage(vbus_raw);
-    result.vbus_voltage = vbus_voltage_mv * VOLTAGE_DIVIDER_RATIO_VBUS / 1000.0f; // 转换为V
-    result.usb_connected = (result.vbus_voltage > 4.0f); // 高于4.0V认为USB连接
-    
+    result.vbus_voltage   = vbus_voltage_mv * VOLTAGE_DIVIDER_RATIO_VBUS / 1000.0f;  // 转换为V
+    result.usb_connected  = (result.vbus_voltage > 4.0f);                            // 高于4.0V认为USB连接
+
     // 读取充电状态
-    int chrg_raw = adc_read_average(ADC_CHRG_CHANNEL, ADC_SAMPLE_COUNT);
-    result.chrg_voltage = adc_raw_to_voltage(chrg_raw) / 1000.0f; // 转换为V
+    int chrg_raw         = adc_read_average(ADC_CHRG_CHANNEL, ADC_SAMPLE_COUNT);
+    result.chrg_voltage  = adc_raw_to_voltage(chrg_raw) / 1000.0f;  // 转换为V
     result.charge_status = get_charge_status_string(result.chrg_voltage * 1000);
-    
+
     return result;
 }
 
@@ -202,28 +202,28 @@ static void update_status_leds(led_strip_handle_t led_strip, const adc_result_t 
     if (led_mutex == NULL || led_strip == NULL) {
         return;
     }
-    
+
     if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         // LED0: 电池状态指示
         if (result->battery_low) {
-            led_strip_set_pixel(led_strip, 0, 255, 0, 0); // 红色 - 低电量
+            led_strip_set_pixel(led_strip, 0, 255, 0, 0);  // 红色 - 低电量
         } else if (result->battery_voltage > 4.0f) {
-            led_strip_set_pixel(led_strip, 0, 0, 255, 0); // 绿色 - 电量充足
+            led_strip_set_pixel(led_strip, 0, 0, 255, 0);  // 绿色 - 电量充足
         } else {
-            led_strip_set_pixel(led_strip, 0, 255, 255, 0); // 黄色 - 电量中等
+            led_strip_set_pixel(led_strip, 0, 255, 255, 0);  // 黄色 - 电量中等
         }
-        
+
         // LED1: 充电状态指示
         if (strcmp(result->charge_status, "Charging") == 0) {
-            led_strip_set_pixel(led_strip, 1, 0, 0, 255); // 蓝色 - 充电中
+            led_strip_set_pixel(led_strip, 1, 0, 0, 255);  // 蓝色 - 充电中
         } else if (strcmp(result->charge_status, "Fully Charged") == 0) {
-            led_strip_set_pixel(led_strip, 1, 0, 255, 0); // 绿色 - 充满电
+            led_strip_set_pixel(led_strip, 1, 0, 255, 0);  // 绿色 - 充满电
         } else if (result->usb_connected) {
-            led_strip_set_pixel(led_strip, 1, 255, 0, 255); // 紫色 - USB连接但不充电
+            led_strip_set_pixel(led_strip, 1, 255, 0, 255);  // 紫色 - USB连接但不充电
         } else {
-            led_strip_set_pixel(led_strip, 1, 0, 0, 0); // 关闭 - 无USB连接
+            led_strip_set_pixel(led_strip, 1, 0, 0, 0);  // 关闭 - 无USB连接
         }
-        
+
         led_strip_refresh(led_strip);
         xSemaphoreGive(led_mutex);
     }
@@ -233,28 +233,23 @@ static void update_status_leds(led_strip_handle_t led_strip, const adc_result_t 
 static void adc_detection_task(void *arg)
 {
     led_strip_handle_t led_strip = (led_strip_handle_t)arg;
-    TickType_t last_wake_time = xTaskGetTickCount();
-    
+    TickType_t last_wake_time    = xTaskGetTickCount();
+
     while (1) {
         // 执行ADC检测
         adc_result_t result = perform_adc_detection();
 
         // 打印检测结果
         ESP_LOGI(TAG, "=== ADC Detection Results ===");
-        ESP_LOGI(TAG, "Battery Voltage: %.2fV %s", 
-                 result.battery_voltage, 
-                 result.battery_low ? "(LOW!)" : "(OK)");
-        ESP_LOGI(TAG, "USB Voltage: %.2fV %s", 
-                 result.vbus_voltage,
+        ESP_LOGI(TAG, "Battery Voltage: %.2fV %s", result.battery_voltage, result.battery_low ? "(LOW!)" : "(OK)");
+        ESP_LOGI(TAG, "USB Voltage: %.2fV %s", result.vbus_voltage,
                  result.usb_connected ? "(Connected)" : "(Disconnected)");
-        ESP_LOGI(TAG, "Charge Status: %s (%.2fV)", 
-                 result.charge_status, 
-                 result.chrg_voltage);
+        ESP_LOGI(TAG, "Charge Status: %s (%.2fV)", result.charge_status, result.chrg_voltage);
         ESP_LOGI(TAG, "=============================");
-        
+
         // 更新LED状态
         update_status_leds(led_strip, &result);
-        
+
         // 每2秒检测一次
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(2000));
     }
@@ -264,7 +259,7 @@ static void adc_detection_task(void *arg)
 void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t adc_handle)
 {
     ESP_LOGI(TAG, "=== ADC Detection Test ===");
-    
+
     // 创建LED互斥锁（如果还没有创建）
     if (led_mutex == NULL) {
         led_mutex = xSemaphoreCreateMutex();
@@ -273,7 +268,7 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
             return;
         }
     }
-    
+
     // 显示测试开始状态 - 白色闪烁
     for (int i = 0; i < 3; i++) {
         safe_led_set_and_refresh(led_strip, 0, 255, 255, 255, 0);
@@ -283,7 +278,7 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
         safe_led_set_and_refresh(led_strip, 1, 0, 0, 0, 0);
         vTaskDelay(pdMS_TO_TICKS(200));
     }
-    
+
     // 初始化ADC
     esp_err_t ret = init_adc(adc_handle);
     if (ret != ESP_OK) {
@@ -295,19 +290,19 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
         }
         return;
     }
-    
+
     ESP_LOGI(TAG, "ADC Detection Configuration:");
     ESP_LOGI(TAG, "- GPIO%d: Battery voltage (VBAT)", ADC_BAT_GPIO);
     ESP_LOGI(TAG, "- GPIO%d: Charge status (TP4057)", ADC_CHRG_GPIO);
     ESP_LOGI(TAG, "- GPIO%d: USB voltage (VBUS)", ADC_VBUS_GPIO);
     ESP_LOGI(TAG, "- Voltage divider ratio: %.2f", VOLTAGE_DIVIDER_RATIO_BAT);
     ESP_LOGI(TAG, "- Sample count: %d", ADC_SAMPLE_COUNT);
-    
+
     ESP_LOGI(TAG, "Charge Status Thresholds:");
-    ESP_LOGI(TAG, "- Not Charging: >%.1fV", CHRG_NOT_CHARGING/1000.0f);
-    ESP_LOGI(TAG, "- Fully Charged: %.1fV-%.1fV", CHRG_CHARGED/1000.0f, CHRG_NOT_CHARGING/1000.0f);
-    ESP_LOGI(TAG, "- Charging: %.1fV-%.1fV", CHRG_CHARGING/1000.0f, CHRG_CHARGED/1000.0f);
-    
+    ESP_LOGI(TAG, "- Not Charging: >%.1fV", CHRG_NOT_CHARGING / 1000.0f);
+    ESP_LOGI(TAG, "- Fully Charged: %.1fV-%.1fV", CHRG_CHARGED / 1000.0f, CHRG_NOT_CHARGING / 1000.0f);
+    ESP_LOGI(TAG, "- Charging: %.1fV-%.1fV", CHRG_CHARGING / 1000.0f, CHRG_CHARGED / 1000.0f);
+
     ESP_LOGI(TAG, "LED Status Indicators:");
     ESP_LOGI(TAG, "  LED0 - Battery Status:");
     ESP_LOGI(TAG, "    Red: Low battery (<3.2V)");
@@ -318,7 +313,7 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
     ESP_LOGI(TAG, "    Green: Fully charged");
     ESP_LOGI(TAG, "    Purple: USB connected, not charging");
     ESP_LOGI(TAG, "    Off: USB disconnected");
-    
+
     // 创建ADC检测任务
     // xTaskCreate(adc_detection_task, "adc_detection_task", 4096, led_strip, 5, NULL);
     update_power_status(led_strip);
@@ -327,10 +322,12 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
 void update_power_status(led_strip_handle_t led_strip)
 {
     adc_result_t result = perform_adc_detection();
-    
+
     // 更新全局变量
     g_battery_voltage = result.battery_voltage;
-    g_charging_status = (strcmp(result.charge_status, "Charging") == 0) ? 1 : (strcmp(result.charge_status, "Fully Charged") == 0) ? 2 : 0;
+    g_charging_status = (strcmp(result.charge_status, "Charging") == 0)        ? 1
+                        : (strcmp(result.charge_status, "Fully Charged") == 0) ? 2
+                                                                               : 0;
     if (g_charging_status == 2) {
         g_battery_percentage = 100;
     } else {
@@ -344,15 +341,10 @@ void update_power_status(led_strip_handle_t led_strip)
     if (led_strip != NULL) {
         // 打印检测结果
         ESP_LOGI(TAG, "=== ADC Detection Results ===");
-        ESP_LOGI(TAG, "Battery Voltage: %.2fV %s", 
-                result.battery_voltage, 
-                result.battery_low ? "(LOW!)" : "(OK)");
-        ESP_LOGI(TAG, "USB Voltage: %.2fV %s", 
-                result.vbus_voltage,
-                result.usb_connected ? "(Connected)" : "(Disconnected)");
-        ESP_LOGI(TAG, "Charge Status: %s (%.2fV)", 
-                result.charge_status, 
-                result.chrg_voltage);
+        ESP_LOGI(TAG, "Battery Voltage: %.2fV %s", result.battery_voltage, result.battery_low ? "(LOW!)" : "(OK)");
+        ESP_LOGI(TAG, "USB Voltage: %.2fV %s", result.vbus_voltage,
+                 result.usb_connected ? "(Connected)" : "(Disconnected)");
+        ESP_LOGI(TAG, "Charge Status: %s (%.2fV)", result.charge_status, result.chrg_voltage);
         ESP_LOGI(TAG, "=============================");
         update_status_leds(led_strip, &result);
     }
@@ -364,7 +356,7 @@ void low_power_test(void)
     // gpio_set_direction((gpio_num_t)21, GPIO_MODE_INPUT);
     // // gpio_set_level((gpio_num_t)21, 1); //拉高
     // gpio_set_pull_mode((gpio_num_t)21, GPIO_PULLDOWN_ONLY);
-    
+
     gpio_deep_sleep_hold_en();
     esp_deep_sleep_start();
 }
