@@ -5,7 +5,7 @@ dependencies:
   idf:
     version: '>=4.1.0'
   espressif/tinyusb:
-    version: '>=0.15.0~2'
+    version: ^0.18.0~2
   button:
     version: ">=4.0.0"
 
