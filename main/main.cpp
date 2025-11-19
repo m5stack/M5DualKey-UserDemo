@@ -65,7 +65,7 @@ extern const char chain_tof_jpg_end[] asm("_binary_Chain_ToF_jpg_end");
 static const char *TAG = "main";
 
 // WiFi配置
-#define AP_SSID       "DualKey_AP"
+#define AP_SSID       "DualKey_mac"
 #define AP_PASSWORD   "12345678"
 #define MAXIMUM_RETRY 5
 
@@ -90,6 +90,7 @@ sys_param_t *sys_param;
 static int s_retry_num       = 0;
 static httpd_handle_t server = NULL;
 static bool wifi_connected   = false;
+static bool wifi_ap_mode     = false;  // WiFi运行模式标志
 
 // WebSocket相关变量
 static int websocket_fd                   = -1;
@@ -99,7 +100,7 @@ static bool send_bus_all_data             = false;
 
 int switch_pos             = 0;  // 0:center, 1:left, 2:right
 bool g_usb_mapping_enabled = true;
-bool g_ble_mapping_enabled = false;
+bool g_ble_mapping_enabled = true;
 uint8_t g_connect_status   = 0;      // 0:未连接, 1:连接中, 2:已连接
 bool g_ble_adv_status      = false;  // 蓝牙广播状态: false=未广播, true=正在广播
 
@@ -161,7 +162,7 @@ device_status_t g_device_status = {.left_key_pressed   = false,
                                    .bluetooth_pairing_status = 0,      // 未配对
                                    .bluetooth_adv_status     = false,  // 未广播
                                    // HID按键映射初始化
-                                   .current_key_mapping = 1,  // 默认为翻页模式
+                                   .current_key_mapping = 9,  // 默认为翻页模式
                                    // WIFI状态初始化
                                    .wifi_ssid      = "",
                                    .wifi_ip        = "",
@@ -197,6 +198,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_connected = false;
         if (s_retry_num < MAXIMUM_RETRY) {
             esp_wifi_connect();
             s_retry_num++;
@@ -208,12 +210,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
             // 切换到AP模式
             wifi_start_ap_mode();
         }
-        wifi_connected = false;
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num    = 0;
         wifi_connected = true;
+        wifi_ap_mode   = false;
         start_webserver();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
@@ -230,8 +232,12 @@ static void wifi_start_ap_mode(void)
     ESP_LOGI(TAG, "Starting AP mode");
 
     wifi_config_t wifi_config = {};
-    strcpy((char *)wifi_config.ap.ssid, AP_SSID);
-    wifi_config.ap.ssid_len = strlen(AP_SSID);
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+    char ap_ssid[32] = {0};
+    sprintf(ap_ssid, "DualKey_%02X%02X", mac[4], mac[5]);
+    strcpy((char *)wifi_config.ap.ssid, ap_ssid);
+    wifi_config.ap.ssid_len = strlen(ap_ssid);
     strcpy((char *)wifi_config.ap.password, AP_PASSWORD);
     wifi_config.ap.max_connection = 4;
     wifi_config.ap.authmode       = WIFI_AUTH_WPA_WPA2_PSK;
@@ -239,6 +245,9 @@ static void wifi_start_ap_mode(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    wifi_ap_mode   = true;
+    wifi_connected = false;
 
     esp_netif_ip_info_t ip_info;
     esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ip_info);
@@ -294,6 +303,9 @@ static void wifi_init_sta(void)
         wifi_config.sta.pmf_cfg.capable    = true;
         wifi_config.sta.pmf_cfg.required   = false;
 
+        wifi_ap_mode   = false;
+        wifi_connected = false;
+
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
         ESP_ERROR_CHECK(esp_wifi_start());
@@ -302,6 +314,8 @@ static void wifi_init_sta(void)
     } else {
         // 没有保存的配置，直接启动AP模式
         ESP_LOGI(TAG, "No saved WiFi config found, starting AP mode");
+        wifi_ap_mode   = false;
+        wifi_connected = false;
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
         ESP_ERROR_CHECK(esp_wifi_start());
         wifi_start_ap_mode();
@@ -313,7 +327,9 @@ static esp_err_t index_get_handler(httpd_req_t *req)
 {
     const uint32_t index_len = index_html_end - index_html_start;
     ESP_LOGI(TAG, "Serve index.html");
-    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
     httpd_resp_send(req, index_html_start, index_len);
     return ESP_OK;
 }
@@ -323,7 +339,9 @@ static esp_err_t styles_get_handler(httpd_req_t *req)
 {
     const uint32_t styles_len = styles_css_end - styles_css_start;
     ESP_LOGI(TAG, "Serve styles.css");
-    httpd_resp_set_type(req, "text/css");
+    httpd_resp_set_type(req, "text/css; charset=utf-8");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, styles_css_start, styles_len);
     return ESP_OK;
 }
@@ -333,7 +351,9 @@ static esp_err_t script_get_handler(httpd_req_t *req)
 {
     const uint32_t script_len = script_js_end - script_js_start;
     ESP_LOGI(TAG, "Serve script.js");
-    httpd_resp_set_type(req, "application/javascript");
+    httpd_resp_set_type(req, "application/javascript; charset=utf-8");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, script_js_start, script_len);
     return ESP_OK;
 }
@@ -354,6 +374,8 @@ static esp_err_t favicon_get_handler(httpd_req_t *req)
     const uint32_t favicon_len = favicon_ico_end - favicon_ico_start;
     ESP_LOGI(TAG, "Serve favicon.ico");
     httpd_resp_set_type(req, "image/x-icon");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, favicon_ico_start, favicon_len);
     return ESP_OK;
 }
@@ -364,6 +386,8 @@ static esp_err_t chain_angle_get_handler(httpd_req_t *req)
     const uint32_t chain_angle_len = chain_angle_jpg_end - chain_angle_jpg_start;
     ESP_LOGI(TAG, "Serve chain_angle.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_angle_jpg_start, chain_angle_len);
     return ESP_OK;
 }
@@ -374,6 +398,8 @@ static esp_err_t chain_blank_get_handler(httpd_req_t *req)
     const uint32_t chain_blank_len = chain_blank_jpg_end - chain_blank_jpg_start;
     ESP_LOGI(TAG, "Serve chain_blank.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_blank_jpg_start, chain_blank_len);
     return ESP_OK;
 }
@@ -384,6 +410,8 @@ static esp_err_t chain_dualKey_get_handler(httpd_req_t *req)
     const uint32_t chain_dualKey_len = chain_dualKey_png_end - chain_dualKey_png_start;
     ESP_LOGI(TAG, "Serve Chain_DualKey.png");
     httpd_resp_set_type(req, "image/png");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_dualKey_png_start, chain_dualKey_len);
     return ESP_OK;
 }
@@ -394,6 +422,8 @@ static esp_err_t chain_encoder_get_handler(httpd_req_t *req)
     const uint32_t chain_encoder_len = chain_encoder_jpg_end - chain_encoder_jpg_start;
     ESP_LOGI(TAG, "Serve Chain_Encoder.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_encoder_jpg_start, chain_encoder_len);
     return ESP_OK;
 }
@@ -404,6 +434,8 @@ static esp_err_t chain_joystick_get_handler(httpd_req_t *req)
     const uint32_t chain_joystick_len = chain_joystick_jpg_end - chain_joystick_jpg_start;
     ESP_LOGI(TAG, "Serve Chain_Joystick.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_joystick_jpg_start, chain_joystick_len);
     return ESP_OK;
 }
@@ -414,6 +446,8 @@ static esp_err_t chain_key_get_handler(httpd_req_t *req)
     const uint32_t chain_key_len = chain_key_jpg_end - chain_key_jpg_start;
     ESP_LOGI(TAG, "Serve Chain_Key.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_key_jpg_start, chain_key_len);
     return ESP_OK;
 }
@@ -424,6 +458,8 @@ static esp_err_t chain_mount_get_handler(httpd_req_t *req)
     const uint32_t chain_mount_len = chain_mount_jpg_end - chain_mount_jpg_start;
     ESP_LOGI(TAG, "Serve Chain_Mount.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_mount_jpg_start, chain_mount_len);
     return ESP_OK;
 }
@@ -434,6 +470,8 @@ static esp_err_t chain_tof_get_handler(httpd_req_t *req)
     const uint32_t chain_tof_len = chain_tof_jpg_end - chain_tof_jpg_start;
     ESP_LOGI(TAG, "Serve Chain_ToF.jpg");
     httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
     httpd_resp_send(req, chain_tof_jpg_start, chain_tof_len);
     return ESP_OK;
 }
@@ -555,16 +593,13 @@ static esp_err_t websocket_handler(httpd_req_t *req)
                     // 设置HID按键映射
                     cJSON *mapping_index = cJSON_GetObjectItem(json, "mapping_index");
                     if (mapping_index && cJSON_IsNumber(mapping_index)) {
-                        int mapping_idx = mapping_index->valueint;
-                        if (mapping_idx >= 0 && mapping_idx < 4) {  // 0-3 对应4种映射模式
-                            // 更新全局状态
-                            g_device_status.current_key_mapping = mapping_idx;
-                            // 调用按键映射设置函数
-                            btn_progress_set_key_mapping(mapping_idx);
-                            ESP_LOGI(TAG, "设置HID按键映射为: %d", mapping_idx);
-                            // 自动保存配置
-                            dualkey_config_save();
-                        }
+                        // 更新全局状态
+                        g_device_status.current_key_mapping = mapping_index->valueint;
+                        // 调用按键映射设置函数
+                        btn_progress_set_key_mapping(mapping_index->valueint);
+                        ESP_LOGI(TAG, "设置HID按键映射为: %d", mapping_index->valueint);
+                        // 自动保存配置
+                        dualkey_config_save();
                     }
                 } else if (strcmp(type->valuestring, "set_key_mapping_switch") == 0) {
                     // 设置按键映射开关
@@ -1186,10 +1221,39 @@ static void update_device_status(void)
     g_device_status.current_key_mapping = btn_progress_get_key_mapping();
 
     // 更新WIFI状态
-    g_device_status.wifi_connected = wifi_connected;
+    if (wifi_ap_mode) {
+        // AP模式：显示AP的信息
+        g_device_status.wifi_connected = true;
 
-    // 获取WiFi信息
-    if (wifi_connected) {
+        // 获取AP配置
+        wifi_config_t wifi_config;
+        esp_err_t ret = esp_wifi_get_config(WIFI_IF_AP, &wifi_config);
+        if (ret == ESP_OK) {
+            strncpy(g_device_status.wifi_ssid, (char *)wifi_config.ap.ssid, sizeof(g_device_status.wifi_ssid) - 1);
+            g_device_status.wifi_ssid[sizeof(g_device_status.wifi_ssid) - 1] = '\0';
+        } else {
+            strcpy(g_device_status.wifi_ssid, "");
+        }
+
+        // 获取AP IP地址
+        esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        if (netif != NULL) {
+            esp_netif_ip_info_t ip_info;
+            ret = esp_netif_get_ip_info(netif, &ip_info);
+            if (ret == ESP_OK) {
+                inet_ntoa_r(ip_info.ip.addr, g_device_status.wifi_ip, sizeof(g_device_status.wifi_ip));
+            } else {
+                strcpy(g_device_status.wifi_ip, "0.0.0.0");
+            }
+        } else {
+            strcpy(g_device_status.wifi_ip, "0.0.0.0");
+        }
+
+        g_device_status.wifi_rssi = 0;
+    } else if (wifi_connected) {
+        // STA模式已连接：显示连接的AP信息
+        g_device_status.wifi_connected = true;
+
         // 获取SSID
         wifi_ap_record_t ap_info;
         esp_err_t ret = esp_wifi_sta_get_ap_info(&ap_info);
@@ -1198,7 +1262,6 @@ static void update_device_status(void)
             g_device_status.wifi_ssid[sizeof(g_device_status.wifi_ssid) - 1] = '\0';
             g_device_status.wifi_rssi                                        = ap_info.rssi;
         } else {
-            // 如果无法获取AP信息，清空SSID
             strcpy(g_device_status.wifi_ssid, "");
             g_device_status.wifi_rssi = 0;
         }
@@ -1207,7 +1270,7 @@ static void update_device_status(void)
         esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         if (netif != NULL) {
             esp_netif_ip_info_t ip_info;
-            esp_err_t ret = esp_netif_get_ip_info(netif, &ip_info);
+            ret = esp_netif_get_ip_info(netif, &ip_info);
             if (ret == ESP_OK) {
                 inet_ntoa_r(ip_info.ip.addr, g_device_status.wifi_ip, sizeof(g_device_status.wifi_ip));
             } else {
@@ -1217,7 +1280,8 @@ static void update_device_status(void)
             strcpy(g_device_status.wifi_ip, "0.0.0.0");
         }
     } else {
-        // WiFi未连接时清空信息
+        // WiFi未连接
+        g_device_status.wifi_connected = false;
         strcpy(g_device_status.wifi_ssid, "");
         strcpy(g_device_status.wifi_ip, "0.0.0.0");
         g_device_status.wifi_rssi = 0;
@@ -1267,8 +1331,8 @@ static httpd_handle_t start_webserver(void)
     }
 
     httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
-    config.max_open_sockets = 7;
-    config.max_uri_handlers = 15;
+    config.max_open_sockets = 10;
+    config.max_uri_handlers = 20;
     config.lru_purge_enable = true;
 
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
@@ -1819,7 +1883,7 @@ void app_main(void)
     start_webserver();
 
     // 启动WebSocket状态更新任务
-    xTaskCreate(websocket_task, "websocket_task", 4096, NULL, 5, &websocket_task_handle);
+    xTaskCreate(websocket_task, "websocket_task", 8192, NULL, 5, &websocket_task_handle);
 
     tinyusb_hid_init();
     // tinyusb_cdc_init(NULL, NULL);

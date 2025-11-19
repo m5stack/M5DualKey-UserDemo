@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DualKey 控制面板</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -54,12 +53,12 @@
                         <!-- RGB控制 -->
                         <div class="rgb-picker">
                             <div class="color-input">
-                                <label data-i18n="leftKeyColor">左键颜色</label>
-                                <input type="color" id="leftKeyColor" value="#ff0000">
+                                <label for="leftKeyColor" data-i18n="leftKeyColor">左键颜色</label>
+                                <input type="color" id="leftKeyColor" value="#ff0000" title="左键颜色选择" aria-label="左键颜色选择">
                             </div>
                             <div class="color-input">
-                                <label data-i18n="rightKeyColor">右键颜色</label>
-                                <input type="color" id="rightKeyColor" value="#00ff00">
+                                <label for="rightKeyColor" data-i18n="rightKeyColor">右键颜色</label>
+                                <input type="color" id="rightKeyColor" value="#00ff00" title="右键颜色选择" aria-label="右键颜色选择">
                             </div>
                         </div>
                         
@@ -83,7 +82,7 @@
                             <h4 data-i18n="batteryStatus">电量状态</h4>
                             <div class="battery-container">
                                 <div class="battery-icon">
-                                    <div class="battery-level" style="width: 75%"></div>
+                                    <div class="battery-level" id="batteryLevelIndicator"></div>
                                 </div>
                                 <div class="battery-info">
                                     <span class="battery-percentage">75%</span>
@@ -123,12 +122,24 @@
                             <span class="value" id="deviceType">HID Keyboard</span>
                         </div>
                         <div class="hid-mapping-control">
-                            <span class="label" data-i18n="keyMapping">按键映射:</span>
-                            <select id="hidMappingSelect" class="mapping-select">
+                            <label for="hidMappingSelect" class="label" data-i18n="keyMapping">按键映射:</label>
+                            <select id="hidMappingSelect" class="mapping-select" title="按键映射选择" aria-label="按键映射选择">
                                 <option value="0" data-i18n="copyPaste">复制粘贴 (Ctrl+C/V)</option>
-                                <option value="1" selected data-i18n="pageUpDown">翻页 (Page Up/Down)</option>
-                                <option value="2" data-i18n="volumeControl">音量控制 (Vol+/-)</option>
-                                <option value="3" data-i18n="mediaControl">媒体控制 (Prev/Next)</option>
+                                <option value="1" data-i18n="copyPasteCmd">复制粘贴 (Cmd+C/V)</option>
+                                <option value="2" data-i18n="undoRedo">撤销重做 (Ctrl+Z/Y)</option>
+                                <option value="3" data-i18n="undoRedoCmd">撤销重做 (Cmd+Z/Y)</option>
+                                <option value="4" data-i18n="undoRedoCmdShift">撤销重做 (Cmd+Z/Cmd+Shift+Z)</option>
+                                <option value="5" data-i18n="tabPage">标签页 (Ctrl+Tab/Ctrl+Shift+Tab)</option>
+                                <option value="6" data-i18n="windowSwitch">窗口切换 (Alt/Cmd+Tab)</option>
+                                <option value="7" data-i18n="zoom">缩放 (Ctrl+Plus/Minus)</option>
+                                <option value="8" data-i18n="zoomCmd">缩放 (Cmd+Plus/Minus)</option>
+                                <option value="9" selected data-i18n="pageUpDown">翻页 (Page Up/Down)</option>
+                                <option value="10" data-i18n="volumeControl">音量控制 (Vol+/-)</option>
+                                <option value="11" data-i18n="mediaControl">媒体控制 (Prev/Next)</option>
+                                <option value="12" data-i18n="mediaControlPlayPause">媒体控制 (PlayPause/Stop)</option>
+                                <option value="13" data-i18n="homeEnd">HOME按键 (Home/End)</option>
+                                <option value="14" data-i18n="upDown">方向键 (Up/Down)</option>
+                                <option value="15" data-i18n="leftRight">方向键 (Left/Right)</option>
                             </select>
                             <button class="btn btn-secondary" id="applyMappingBtn" data-i18n="apply">应用</button>
                         </div>
@@ -136,15 +147,15 @@
                             <span class="label" data-i18n="mappingSwitch">映射开关:</span>
                             <div class="switch-group">
                                 <div class="switch-item">
-                                    <label class="switch">
-                                        <input type="checkbox" id="usbMappingSwitch" checked>
+                                    <label class="switch" for="usbMappingSwitch">
+                                        <input type="checkbox" id="usbMappingSwitch" checked title="USB映射开关" aria-label="USB映射开关">
                                         <span class="switch-slider round"></span>
                                     </label>
                                     <span class="switch-label" data-i18n="usbMapping">USB映射</span>
                                 </div>
                                 <div class="switch-item">
-                                    <label class="switch">
-                                        <input type="checkbox" id="bleMappingSwitch" checked>
+                                    <label class="switch" for="bleMappingSwitch">
+                                        <input type="checkbox" id="bleMappingSwitch" checked title="蓝牙映射开关" aria-label="蓝牙映射开关">
                                         <span class="switch-slider round"></span>
                                     </label>
                                     <span class="switch-label" data-i18n="bluetoothMapping">蓝牙映射</span>
@@ -157,8 +168,8 @@
                                 <div class="mapping-info">
                                     <span class="mapping-name" id="currentMappingName" data-i18n="pageUpDown">翻页 (Page Up/Down)</span>
                                     <div class="key-mapping-detail">
-                                        <span class="key-detail" id="usbMappingDetail" data-i18n="enabled">USB模式: 已启用</span>
-                                        <span class="key-detail" id="bleMappingDetail" data-i18n="enabled">蓝牙模式: 已启用</span>
+                                        <span class="key-detail" id="usbMappingDetail" data-i18n="enabled">USB mode: 已启用</span>
+                                        <span class="key-detail" id="bleMappingDetail" data-i18n="enabled">BLE mode: 已启用</span>
                                     </div>
                                 </div>
                             </div>
@@ -198,32 +209,32 @@
                             <h4 data-i18n="wifiConfig">WIFI配置(双键长按重置)</h4>
                             <div class="wifi-config-form">
                                 <div class="form-group">
-                                    <label data-i18n="ssid">SSID:</label>
-                                    <input type="text" id="wifiConfigSSID" class="wifi-input" placeholder="输入WiFi名称">
+                                    <label for="wifiConfigSSID" data-i18n="ssid">SSID:</label>
+                                    <input type="text" id="wifiConfigSSID" class="wifi-input" placeholder="输入WiFi名称" title="WiFi网络名称" aria-label="WiFi网络名称">
                                 </div>
                                 <div class="form-group">
-                                    <label data-i18n="password">密码:</label>
-                                    <input type="password" id="wifiConfigPassword" class="wifi-input" placeholder="输入WiFi密码">
+                                    <label for="wifiConfigPassword" data-i18n="password">密码:</label>
+                                    <input type="password" id="wifiConfigPassword" class="wifi-input" placeholder="输入WiFi密码" title="WiFi网络密码" aria-label="WiFi网络密码">
                                 </div>
                                 <div class="form-group">
-                                    <label class="switch">
-                                        <input type="checkbox" id="wifiStaticIPSwitch">
+                                    <label class="switch" for="wifiStaticIPSwitch">
+                                        <input type="checkbox" id="wifiStaticIPSwitch" title="使用静态IP地址" aria-label="使用静态IP地址">
                                         <span class="switch-slider round"></span>
                                     </label>
                                     <span class="switch-label" data-i18n="useStaticIP">使用静态IP</span>
                                 </div>
-                                <div id="wifiStaticIPConfig" class="static-ip-config" style="display: none;">
+                                <div id="wifiStaticIPConfig" class="static-ip-config hidden">
                                     <div class="form-group">
-                                        <label data-i18n="ipAddress">IP地址:</label>
-                                        <input type="text" id="wifiStaticIP" class="wifi-input" placeholder="192.168.1.100">
+                                        <label for="wifiStaticIP" data-i18n="ipAddress">IP地址:</label>
+                                        <input type="text" id="wifiStaticIP" class="wifi-input" placeholder="192.168.1.100" title="静态IP地址" aria-label="静态IP地址">
                                     </div>
                                     <div class="form-group">
-                                        <label data-i18n="subnetMask">子网掩码:</label>
-                                        <input type="text" id="wifiStaticNetmask" class="wifi-input" placeholder="255.255.255.0">
+                                        <label for="wifiStaticNetmask" data-i18n="subnetMask">子网掩码:</label>
+                                        <input type="text" id="wifiStaticNetmask" class="wifi-input" placeholder="255.255.255.0" title="子网掩码" aria-label="子网掩码">
                                     </div>
                                     <div class="form-group">
-                                        <label data-i18n="gateway">网关:</label>
-                                        <input type="text" id="wifiStaticGateway" class="wifi-input" placeholder="192.168.1.1">
+                                        <label for="wifiStaticGateway" data-i18n="gateway">网关:</label>
+                                        <input type="text" id="wifiStaticGateway" class="wifi-input" placeholder="192.168.1.1" title="网关地址" aria-label="网关地址">
                                     </div>
                                 </div>
                                 <div class="wifi-config-actions">
@@ -291,8 +302,8 @@
                         </div>
                         
                         <div class="bus-rgb">
-                            <label data-i18n="busRGB">总线RGB:</label>
-                            <input type="color" class="bus-color-picker" id="leftBusColorPicker" value="#000000">
+                            <label for="leftBusColorPicker" data-i18n="busRGB">总线RGB:</label>
+                            <input type="color" class="bus-color-picker" id="leftBusColorPicker" value="#000000" title="左总线RGB颜色选择" aria-label="左总线RGB颜色选择">
                             <button class="btn btn-secondary bus-rgb-btn" id="leftBusRgbBtn" data-i18n="set">设置</button>
                         </div>
                         
@@ -324,8 +335,8 @@
                         </div>
                         
                         <div class="bus-rgb">
-                            <label data-i18n="busRGB">总线RGB:</label>
-                            <input type="color" class="bus-color-picker" id="rightBusColorPicker" value="#000000">
+                            <label for="rightBusColorPicker" data-i18n="busRGB">总线RGB:</label>
+                            <input type="color" class="bus-color-picker" id="rightBusColorPicker" value="#000000" title="右总线RGB颜色选择" aria-label="右总线RGB颜色选择">
                             <button class="btn btn-secondary bus-rgb-btn" id="rightBusRgbBtn" data-i18n="set">设置</button>
                         </div>
                         

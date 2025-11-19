@@ -22,6 +22,7 @@ body {
 /* 头部样式 */
 .header {
     background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 30px;
@@ -58,6 +59,7 @@ body {
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
@@ -159,6 +161,7 @@ body {
 /* 卡片通用样式 */
 .card {
     background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: 16px;
     padding: 25px;
@@ -540,6 +543,7 @@ body {
     color: #374151;
     font-size: 14px;
     font-weight: 500;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -675,6 +679,14 @@ body {
     padding-left: 20px;
     border-left: 3px solid rgb(0, 100, 194);
     margin-top: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+#batteryLevelIndicator {
+    width: 75%;
 }
 
 .wifi-config-actions {
@@ -842,6 +854,7 @@ body {
 /* Chain Bus 可视化样式 */
 .chain-bus-visualization {
     background: rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 30px;
@@ -1064,7 +1077,7 @@ body {
     .bus-container {
         flex-direction: column;
         gap: 30px;
-        min-height: auto;
+        min-height: 0;
         padding: 10px 0;
     }
 

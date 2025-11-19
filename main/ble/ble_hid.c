@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <stdlib.h>
+#include <string.h>
 #include "esp_log.h"
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
@@ -13,6 +15,7 @@
 #include "esp_hid_gap.h"
 #include "esp_hidd.h"
 #include "ble_hid.h"
+#include "esp_mac.h"
 
 extern uint8_t g_connect_status;
 
@@ -52,8 +55,8 @@ static esp_hid_raw_report_map_t ble_report_maps[] = {{
 static esp_hid_device_config_t ble_hid_config = {.vendor_id         = 0xe502,
                                                  .product_id        = 0xbbab,
                                                  .version           = 0x0100,
-                                                 .device_name       = "Chain DualKey",
-                                                 .manufacturer_name = "Espressif",
+                                                 .device_name       = NULL,
+                                                 .manufacturer_name = "M5Stack",
                                                  .serial_number     = "1234567890",
                                                  .report_maps       = ble_report_maps,
                                                  .report_maps_len   = 1};
@@ -121,10 +124,19 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
 esp_err_t ble_hid_init(void)
 {
     esp_err_t ret;
-    ret = esp_hid_gap_init();
-    ESP_ERROR_CHECK(ret);
 
     ble_hid_config.report_maps[0].len = desc_hid_report_len;
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+    static char ble_name[32] = {0};
+    sprintf(ble_name, "DualKey-%02X%02X", mac[4], mac[5]);
+    if (ble_hid_config.device_name != NULL) {
+        free((void *)ble_hid_config.device_name);
+    }
+    ble_hid_config.device_name = strdup(ble_name);
+
+    ret = esp_hid_gap_init();
+    ESP_ERROR_CHECK(ret);
 
     ret = esp_hid_ble_gap_adv_init(ESP_HID_APPEARANCE_GENERIC, ble_hid_config.device_name);
     ESP_ERROR_CHECK(ret);
@@ -141,6 +153,10 @@ esp_err_t ble_hid_deinit(void)
 {
     ESP_ERROR_CHECK(esp_hidd_dev_deinit(s_ble_hid_param.hid_dev));
     ESP_ERROR_CHECK(esp_hid_gap_deinit());
+    if (ble_hid_config.device_name != NULL) {
+        free((void *)ble_hid_config.device_name);
+        ble_hid_config.device_name = NULL;
+    }
     return ESP_OK;
 }
 void ble_hid_keyboard_report(hid_report_t report)

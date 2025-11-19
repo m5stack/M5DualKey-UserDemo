@@ -24,8 +24,8 @@ extern bool g_ble_mapping_enabled;
 
 static btn_report_type_t report_type = USB_CDC_REPORT;
 
-// 当前按键映射索引，默认为1（翻页模式）
-static int current_key_mapping_index = 1;
+// 当前按键映射索引，默认为9（翻页模式）
+static int current_key_mapping_index = 9;
 
 #define HSV_MAX 18
 static uint8_t hsv_index             = 0;
@@ -108,9 +108,10 @@ void btn_progress(keyboard_btn_report_t kbd_report)
                 printf("Momentary action_layer: %d\n", mo_action_layer);
                 break;
 
-            case QK_LCTL ... QK_LSFT:
-                // add HID_KEY_CONTROL_LEFT
-                modify |= 1;
+            case QK_LCTL ... QK_RSFT:  // 扩展范围到所有修饰键组合
+                // 提取修饰键位掩码（高字节）
+                modify |= (kc >> 8) & 0xFF;
+                // 提取基础按键码（低字节）
                 keycode[keynum++] = QK_MODS_GET_BASIC_KEYCODE(kc);
                 break;
 
@@ -140,6 +141,16 @@ void btn_progress(keyboard_btn_report_t kbd_report)
 
             case KC_MEDIA_NEXT_TRACK:
                 consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_SCAN_NEXT;
+                if_consumer_report                      = true;
+                break;
+
+            case KC_MEDIA_PLAY_PAUSE:
+                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_PLAY_PAUSE;
+                if_consumer_report                      = true;
+                break;
+
+            case KC_MEDIA_STOP:
+                consumer_report.consumer_report.keycode = HID_USAGE_CONSUMER_STOP;
                 if_consumer_report                      = true;
                 break;
 
@@ -213,6 +224,22 @@ void btn_progress(keyboard_btn_report_t kbd_report)
             case KC_KB_VOLUME_DOWN:
                 release_consumer_report = true;
                 break;
+
+            case KC_MEDIA_PREV_TRACK:
+                release_consumer_report = true;
+                break;
+
+            case KC_MEDIA_NEXT_TRACK:
+                release_consumer_report = true;
+                break;
+
+            case KC_MEDIA_PLAY_PAUSE:
+                release_consumer_report = true;
+                break;
+
+            case KC_MEDIA_STOP:
+                release_consumer_report = true;
+                break;
         }
     }
 
@@ -261,7 +288,7 @@ void btn_progress_set_report_type(btn_report_type_t type)
 
 void btn_progress_set_key_mapping(int mapping_index)
 {
-    if (mapping_index >= 0 && mapping_index < 4) {
+    if (mapping_index >= 0 && mapping_index < 16) {
         current_key_mapping_index = mapping_index;
         ESP_LOGI("btn_progress", "按键映射已设置为: %d", mapping_index);
     } else {

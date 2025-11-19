@@ -7,7 +7,7 @@ class LanguageManager {
         this.currentLanguage = localStorage.getItem('language') || 'zh';
         this.translations = {
             zh: {
-                title: 'DualKey 控制面板',
+                title: 'DualKey 控制面板 v0.5',
                 connectionStatus: '连接状态:',
                 lastUpdate: '最后更新:',
                 online: '在线',
@@ -67,9 +67,22 @@ class LanguageManager {
                 notConnected: '未连接',
                 disconnected: '已断开',
                 copyPaste: '复制粘贴 (Ctrl+C/V)',
+                copyPasteCmd: '复制粘贴 (Cmd+C/V)',
+                undoRedo: '撤销重做 (Ctrl+Z/Y)',
+                undoRedoCmd: '撤销重做 (Cmd+Z/Y)',
+                undoRedoCmdShift: '撤销重做 (Cmd+Z/Cmd+Shift+Z)',
+                tabPage: '标签页 (Ctrl+Tab/Ctrl+Shift+Tab)',
+                tabPageCmd: '标签页 (Cmd+Tab/Cmd+Shift+Tab)',
+                windowSwitch: '窗口切换 (Alt/Cmd+Tab)',
+                zoom: '缩放 (Ctrl+Plus/Minus)',
+                zoomCmd: '缩放 (Cmd+Plus/Minus)',
                 pageUpDown: '翻页 (Page Up/Down)',
                 volumeControl: '音量控制 (Vol+/-)',
                 mediaControl: '媒体控制 (Prev/Next)',
+                mediaControlPlayPause: '媒体控制 (PlayPause/Stop)',
+                homeEnd: 'HOME按键 (Home/End)',
+                upDown: '方向键 (Up/Down)',
+                leftRight: '方向键 (Left/Right)',
                 apply: '应用',
                 enabled: '已启用',
                 disabled: '已禁用',
@@ -180,7 +193,7 @@ class LanguageManager {
                 pairingTip: '目前仅支持旧主机删除连接后才能与新设备配对',
             },
             en: {
-                title: 'DualKey Control Panel',
+                title: 'DualKey Control Panel v0.5',
                 connectionStatus: 'Connection Status:',
                 lastUpdate: 'Last Update:',
                 online: 'Online',
@@ -240,9 +253,22 @@ class LanguageManager {
                 notConnected: 'Not Connected',
                 disconnected: 'Disconnected',
                 copyPaste: 'Copy Paste (Ctrl+C/V)',
+                copyPasteCmd: 'Copy Paste (Cmd+C/V)',
+                undoRedo: 'Undo Redo (Ctrl+Z/Y)',
+                undoRedoCmd: 'Undo Redo (Cmd+Z/Y)',
+                undoRedoCmdShift: 'Undo Redo (Cmd+Z/Cmd+Shift+Z)',
+                tabPage: 'Tab Page (Ctrl+Tab/Ctrl+Shift+Tab)',
+                tabPageCmd: 'Tab Page (Cmd+Tab/Cmd+Shift+Tab)',
+                windowSwitch: 'Window Switch (Alt/Cmd+Tab)',
+                zoom: 'Zoom (Ctrl+Plus/Minus)',
+                zoomCmd: 'Zoom (Cmd+Plus/Minus)',
                 pageUpDown: 'Page Up/Down',
                 volumeControl: 'Volume Control (Vol+/-)',
                 mediaControl: 'Media Control (Prev/Next)',
+                mediaControlPlayPause: 'Media Control (PlayPause/Stop)',
+                homeEnd: 'HOME Key (Home/End)',
+                upDown: 'Arrow Keys (Up/Down)',
+                leftRight: 'Arrow Keys (Left/Right)',
                 apply: 'Apply',
                 enabled: 'Enabled',
                 disabled: 'Disabled',
@@ -471,7 +497,7 @@ class DualKeyController {
             bluetoothAdvStatus: false,
             deviceName: "Chain DualKey",
             deviceType: "HID Keyboard",
-            currentKeyMapping: 1,
+            currentKeyMapping: 9,
             bluetoothPairingStatus: 0,
             usbMappingEnabled: true,
             bleMappingEnabled: true
@@ -950,7 +976,7 @@ class DualKeyController {
     updateDeviceElement(element, device) {
         // 在更新前保存HID配置的展开状态
         const hidConfigContent = element.querySelector('.hid-config-content');
-        const wasHIDExpanded = hidConfigContent && hidConfigContent.style.display !== 'none';
+        const wasHIDExpanded = hidConfigContent && !hidConfigContent.classList.contains('hidden');
 
         // 检查设备是否支持RGB
         const supportsRGB = this.deviceSupportsRGB(device.type);
@@ -1013,7 +1039,7 @@ class DualKeyController {
                 const toggleIcon = toggleButton ? toggleButton.querySelector('.toggle-icon') : null;
 
                 if (newConfigContent) {
-                    newConfigContent.style.display = 'block';
+                    newConfigContent.classList.remove('hidden');
                     if (toggleIcon) {
                         toggleIcon.textContent = '▲';
                     }
@@ -1137,7 +1163,7 @@ class DualKeyController {
                         <span class="toggle-icon">▼</span>
                     </button>
                 </div>
-                <div class="hid-config-content" style="display: none;">
+                <div class="hid-config-content hidden">
         `;
 
         switch (device.type) {
@@ -1412,8 +1438,12 @@ class DualKeyController {
         // 绑定展开/收起事件
         if (toggleButton && configContent) {
             toggleButton.addEventListener('click', () => {
-                const isVisible = configContent.style.display !== 'none';
-                configContent.style.display = isVisible ? 'none' : 'block';
+                const isVisible = !configContent.classList.contains('hidden');
+                if (isVisible) {
+                    configContent.classList.add('hidden');
+                } else {
+                    configContent.classList.remove('hidden');
+                }
                 const toggleIcon = toggleButton.querySelector('.toggle-icon');
                 if (toggleIcon) {
                     toggleIcon.textContent = isVisible ? '▼' : '▲';
@@ -1817,7 +1847,7 @@ class DualKeyController {
             bluetoothPairingStatus: 0, // 0:未配对, 1:配对中, 2:已配对
             bluetoothAdvStatus: false, // 蓝牙广播状态: false=未广播, true=正在广播
             // HID按键映射
-            currentKeyMapping: 1, // 默认为翻页模式
+            currentKeyMapping: 9, // 默认为翻页模式
             // 按键映射开关状态
             usbMappingEnabled: true,
             bleMappingEnabled: true,
@@ -2289,9 +2319,9 @@ class DualKeyController {
         if (staticIPSwitch && staticIPConfig) {
             staticIPSwitch.addEventListener('change', () => {
                 if (staticIPSwitch.checked) {
-                    staticIPConfig.style.display = 'block';
+                    staticIPConfig.classList.remove('hidden');
                 } else {
-                    staticIPConfig.style.display = 'none';
+                    staticIPConfig.classList.add('hidden');
                 }
             });
         }
@@ -2384,7 +2414,7 @@ class DualKeyController {
         document.getElementById('wifiConfigSSID').value = '';
         document.getElementById('wifiConfigPassword').value = '';
         document.getElementById('wifiStaticIPSwitch').checked = false;
-        document.getElementById('wifiStaticIPConfig').style.display = 'none';
+        document.getElementById('wifiStaticIPConfig').classList.add('hidden');
         document.getElementById('wifiStaticIP').value = '';
         document.getElementById('wifiStaticNetmask').value = '';
         document.getElementById('wifiStaticGateway').value = '';
@@ -2825,13 +2855,25 @@ class DualKeyController {
 
         // 映射配置定义
         const mappingConfigs = [
-            { name: '复制粘贴 (Ctrl+C/V)' },
-            { name: '翻页 (Page Up/Down)' },
-            { name: '音量控制 (Vol+/-)' },
-            { name: '媒体控制 (Prev/Next)' }
+            { index: 0, name: languageManager.getText('copyPaste')},
+            { index: 1, name: languageManager.getText('copyPasteCmd')},
+            { index: 2, name: languageManager.getText('undoRedo')},
+            { index: 3, name: languageManager.getText('undoRedoCmd')},
+            { index: 4, name: languageManager.getText('undoRedoCmdShift')},
+            { index: 5, name: languageManager.getText('tabPage')},
+            { index: 6, name: languageManager.getText('windowSwitch')},
+            { index: 7, name: languageManager.getText('zoom')},
+            { index: 8, name: languageManager.getText('zoomCmd')},
+            { index: 9, name: languageManager.getText('pageUpDown')},
+            { index: 10, name: languageManager.getText('volumeControl')},
+            { index: 11, name: languageManager.getText('mediaControl')},
+            { index: 12, name: languageManager.getText('mediaControlPlayPause')},
+            { index: 13, name: languageManager.getText('homeEnd')},
+            { index: 14, name: languageManager.getText('upDown')},
+            { index: 15, name: languageManager.getText('leftRight')},
         ];
 
-        const currentConfig = mappingConfigs[this.dualkeyState.currentKeyMapping] || mappingConfigs[1];
+        const currentConfig = mappingConfigs[this.dualkeyState.currentKeyMapping] || mappingConfigs[9];
 
         // 更新映射名称
         if (currentMappingName) {
@@ -2840,7 +2882,7 @@ class DualKeyController {
 
         // 更新USB模式状态
         if (usbMappingDetail) {
-            usbMappingDetail.textContent = `USB模式: ${this.dualkeyState.usbMappingEnabled ? languageManager.getText('enabled') : languageManager.getText('disabled')}`;
+            usbMappingDetail.textContent = `USB mode: ${this.dualkeyState.usbMappingEnabled ? languageManager.getText('enabled') : languageManager.getText('disabled')}`;
             if (this.dualkeyState.usbMappingEnabled) {
                 usbMappingDetail.classList.remove('disabled');
             } else {
@@ -2850,7 +2892,7 @@ class DualKeyController {
 
         // 更新蓝牙模式状态
         if (bleMappingDetail) {
-            bleMappingDetail.textContent = `蓝牙模式: ${this.dualkeyState.bleMappingEnabled ? languageManager.getText('enabled') : languageManager.getText('disabled')}`;
+            bleMappingDetail.textContent = `BLE mode: ${this.dualkeyState.bleMappingEnabled ? languageManager.getText('enabled') : languageManager.getText('disabled')}`;
             if (this.dualkeyState.bleMappingEnabled) {
                 bleMappingDetail.classList.remove('disabled');
             } else {
