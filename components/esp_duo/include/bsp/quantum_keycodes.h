@@ -62,6 +62,7 @@
 #define LSA(kc) (QK_LSFT | QK_LALT | (kc))
 #define RSA(kc) (QK_RSFT | QK_RALT | (kc))
 #define RCS(kc) (QK_RCTL | QK_RSFT | (kc))
+#define LCS(kc) (QK_LCTL | QK_LSFT | (kc))
 #define SAGR(kc) RSA(kc)
 
 // Modified keycode aliases

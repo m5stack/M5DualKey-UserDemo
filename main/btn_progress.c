@@ -24,8 +24,8 @@ extern bool g_ble_mapping_enabled;
 
 static btn_report_type_t report_type = USB_CDC_REPORT;
 
-// 当前按键映射索引，默认为9（翻页模式）
-static int current_key_mapping_index = 9;
+// 当前按键映射索引，默认为10（翻页模式）
+static int current_key_mapping_index = 10;
 
 #define HSV_MAX 18
 static uint8_t hsv_index             = 0;
@@ -288,7 +288,7 @@ void btn_progress_set_report_type(btn_report_type_t type)
 
 void btn_progress_set_key_mapping(int mapping_index)
 {
-    if (mapping_index >= 0 && mapping_index < 16) {
+    if (mapping_index >= 0 && mapping_index < 17) {
         current_key_mapping_index = mapping_index;
         ESP_LOGI("btn_progress", "按键映射已设置为: %d", mapping_index);
     } else {

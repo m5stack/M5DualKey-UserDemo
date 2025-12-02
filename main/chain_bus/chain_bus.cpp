@@ -197,12 +197,14 @@ void chain_bus_scan_single(int bus_idx)
 
             // 如果UID有效，尝试加载保存的配置
             if (status->device_status[i].uid_valid) {
+                uint32_t loaded_rgb_color = 0;
                 esp_err_t load_ret = chain_bus_config_load(status->device_status[i].uid, status->device_status[i].type,
-                                                           &status->device_status[i].hid_config);
+                                                           &status->device_status[i].hid_config, &loaded_rgb_color);
                 if (load_ret == ESP_OK) {
                     config_loaded                                   = true;
                     status->device_status[i].hid_config_initialized = true;
                     ESP_LOGI(TAG, "[%s] 设备 %d 已加载保存的配置", bus_names[bus_idx], status->device_status[i].id);
+                    chain_bus_set_device_rgb(bus_idx, status->device_status[i].id, loaded_rgb_color);
                 }
             }
 
@@ -1030,6 +1032,8 @@ esp_err_t chain_bus_set_device_rgb(int bus_idx, uint8_t device_id, uint32_t rgb_
         ret = ESP_FAIL;
     }
 
+    chain_bus_save_device_config(bus_idx, device_id);
+
     // 重置RGB设置状态
     dev_status->rgb_setting = false;
 
@@ -1178,7 +1182,7 @@ esp_err_t chain_bus_save_device_config(int bus_idx, uint8_t device_id)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ret = chain_bus_config_save(dev_status->uid, dev_status->type, &dev_status->hid_config);
+    ret = chain_bus_config_save(dev_status->uid, dev_status->type, &dev_status->hid_config, dev_status->rgb_color);
     if (ret == ESP_OK) {
         char uid_str[25];
         chain_bus_uid_to_string(dev_status->uid, uid_str);

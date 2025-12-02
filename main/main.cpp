@@ -104,6 +104,8 @@ bool g_ble_mapping_enabled = true;
 uint8_t g_connect_status   = 0;      // 0:未连接, 1:连接中, 2:已连接
 bool g_ble_adv_status      = false;  // 蓝牙广播状态: false=未广播, true=正在广播
 
+#define enable_web_cache 1  // 1:启用Web缓存, 60分钟不变,ctrl+F5/cmd+shift+R刷新, 0:禁用Web缓存
+
 // 状态刷新消息类型
 typedef enum {
     STATUS_REFRESH_NORMAL,    // 正常刷新
@@ -126,12 +128,15 @@ typedef struct {
     bool right_key_pressed;
     uint32_t left_key_color;
     uint32_t right_key_color;
+    float usb_voltage;
     bool usb_connected;
     int usb_mode;        // 0:HID, 1:BLE, 2:CDC
     int dip_switch_pos;  // 0:center, 1:left, 2:right
     float battery_voltage;
     int charge_status;  // 0:未充电, 1:充电中, 2:充满
     int battery_percentage;
+    int switch_1_value;  // 拨码开关1值
+    int switch_2_value;  // 拨码开关2值
     // 蓝牙状态
     bool bluetooth_connected;
     char bluetooth_device_name[32];
@@ -150,12 +155,15 @@ device_status_t g_device_status = {.left_key_pressed   = false,
                                    .right_key_pressed  = false,
                                    .left_key_color     = 0x000000,  // 红色
                                    .right_key_color    = 0x000000,  // 绿色
+                                   .usb_voltage        = 0.0f,
                                    .usb_connected      = true,
                                    .usb_mode           = 0,  // HID
                                    .dip_switch_pos     = 0,  // center
                                    .battery_voltage    = 3.7f,
                                    .charge_status      = 0,
                                    .battery_percentage = 75,
+                                   .switch_1_value     = 0,
+                                   .switch_2_value     = 0,
                                    // 蓝牙状态初始化
                                    .bluetooth_connected      = false,
                                    .bluetooth_device_name    = USB_HID_PRODUCT,
@@ -246,6 +254,8 @@ static void wifi_start_ap_mode(void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
+    esp_wifi_set_max_tx_power(40);  // 设置最大发射功率为40dBm
+
     wifi_ap_mode   = true;
     wifi_connected = false;
 
@@ -329,7 +339,11 @@ static esp_err_t index_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve index.html");
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, index_html_start, index_len);
     return ESP_OK;
 }
@@ -341,7 +355,11 @@ static esp_err_t styles_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve styles.css");
     httpd_resp_set_type(req, "text/css; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, styles_css_start, styles_len);
     return ESP_OK;
 }
@@ -353,7 +371,11 @@ static esp_err_t script_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve script.js");
     httpd_resp_set_type(req, "application/javascript; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, script_js_start, script_len);
     return ESP_OK;
 }
@@ -375,7 +397,11 @@ static esp_err_t favicon_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve favicon.ico");
     httpd_resp_set_type(req, "image/x-icon");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, favicon_ico_start, favicon_len);
     return ESP_OK;
 }
@@ -387,7 +413,11 @@ static esp_err_t chain_angle_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve chain_angle.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_angle_jpg_start, chain_angle_len);
     return ESP_OK;
 }
@@ -399,7 +429,11 @@ static esp_err_t chain_blank_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve chain_blank.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_blank_jpg_start, chain_blank_len);
     return ESP_OK;
 }
@@ -411,7 +445,11 @@ static esp_err_t chain_dualKey_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_DualKey.png");
     httpd_resp_set_type(req, "image/png");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_dualKey_png_start, chain_dualKey_len);
     return ESP_OK;
 }
@@ -423,7 +461,11 @@ static esp_err_t chain_encoder_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_Encoder.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_encoder_jpg_start, chain_encoder_len);
     return ESP_OK;
 }
@@ -435,7 +477,11 @@ static esp_err_t chain_joystick_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_Joystick.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_joystick_jpg_start, chain_joystick_len);
     return ESP_OK;
 }
@@ -447,7 +493,11 @@ static esp_err_t chain_key_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_Key.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_key_jpg_start, chain_key_len);
     return ESP_OK;
 }
@@ -459,7 +509,11 @@ static esp_err_t chain_mount_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_Mount.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_mount_jpg_start, chain_mount_len);
     return ESP_OK;
 }
@@ -471,7 +525,11 @@ static esp_err_t chain_tof_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve Chain_ToF.jpg");
     httpd_resp_set_type(req, "image/jpeg");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+#if enable_web_cache
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+#else
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+#endif
     httpd_resp_send(req, chain_tof_jpg_start, chain_tof_len);
     return ESP_OK;
 }
@@ -937,13 +995,15 @@ static void websocket_send_status(void)
     cJSON_AddBoolToObject(dualkey, "right_key_pressed", g_device_status.right_key_pressed);
     cJSON_AddNumberToObject(dualkey, "left_key_color", g_device_status.left_key_color);
     cJSON_AddNumberToObject(dualkey, "right_key_color", g_device_status.right_key_color);
+    cJSON_AddNumberToObject(dualkey, "usb_voltage", g_device_status.usb_voltage);
     cJSON_AddBoolToObject(dualkey, "usb_connected", g_device_status.usb_connected);
     cJSON_AddNumberToObject(dualkey, "usb_mode", g_device_status.usb_mode);
     cJSON_AddNumberToObject(dualkey, "dip_switch_pos", g_device_status.dip_switch_pos);
     cJSON_AddNumberToObject(dualkey, "battery_voltage", g_device_status.battery_voltage);
     cJSON_AddNumberToObject(dualkey, "charge_status", g_device_status.charge_status);
     cJSON_AddNumberToObject(dualkey, "battery_percentage", g_device_status.battery_percentage);
-
+    cJSON_AddNumberToObject(dualkey, "switch_1_value", g_device_status.switch_1_value);
+    cJSON_AddNumberToObject(dualkey, "switch_2_value", g_device_status.switch_2_value);
     // 蓝牙状态
     cJSON_AddBoolToObject(dualkey, "bluetooth_connected", g_device_status.bluetooth_connected);
     cJSON_AddStringToObject(dualkey, "bluetooth_device_name", g_device_status.bluetooth_device_name);
@@ -1151,7 +1211,7 @@ static void websocket_send_status(void)
     cJSON_AddItemToObject(json, "dualkey", dualkey);
     cJSON_AddItemToObject(json, "chainbus", chainbus);
 
-    char *json_str = cJSON_Print(json);
+    char *json_str = cJSON_PrintUnformatted(json);
     if (json_str) {
         httpd_ws_frame_t ws_pkt;
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
@@ -1173,9 +1233,6 @@ static void websocket_send_status(void)
 // 更新设备状态
 static void update_device_status(void)
 {
-    // 更新USB连接状态
-    g_device_status.usb_connected = true;  // 暂时硬编码
-
     // 更新拨码开关位置
     if (sys_param) {
         switch (switch_pos) {
@@ -1201,6 +1258,7 @@ static void update_device_status(void)
     g_device_status.charge_status      = g_charging_status;
     g_device_status.battery_percentage = g_battery_percentage;
     g_device_status.usb_connected      = g_usb_connected;
+    g_device_status.usb_voltage        = g_usb_voltage;
 
     // 更新蓝牙状态
     g_device_status.bluetooth_connected = (g_connect_status == 2);
@@ -1331,7 +1389,7 @@ static httpd_handle_t start_webserver(void)
     }
 
     httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
-    config.max_open_sockets = 10;
+    config.max_open_sockets = 6;
     config.max_uri_handlers = 20;
     config.lru_purge_enable = true;
 
@@ -1462,10 +1520,12 @@ void adc_switch_task(void *pvParameters)
     while (1) {
         adc_oneshot_read(handle, KBD_ADC_SWITCH_BLE_CHAN, &adc_value[0]);
         adc_oneshot_read(handle, KBD_ADC_SWITCH_RAINMAKER_CHAN, &adc_value[1]);
-        if (adc_value[0] > 3000) {
+        g_device_status.switch_1_value = adc_value[0];
+        g_device_status.switch_2_value = adc_value[1];
+        if (adc_value[0] > 2000) {
             // report_type = BLE_HID_REPORT;
             switch_pos = 2;
-        } else if (adc_value[1] > 3000) {
+        } else if (adc_value[1] > 2000) {
             // report_type = USB_CDC_REPORT;
             switch_pos = 1;
         } else {
@@ -1473,7 +1533,7 @@ void adc_switch_task(void *pvParameters)
             switch_pos = 0;
         }
 
-        // ESP_LOGI(TAG, "adc_value[0]: %d, adc_value[1]: %d", adc_value[0], adc_value[1]);
+        // ESP_LOGI(TAG, "adc_value[0]: %d, adc_value[1]: %d", g_device_status.switch_1_value, g_device_status.switch_2_value);
 
         if (report_type != sys_param->report_type) {
             sys_param->report_type = report_type;
@@ -1883,7 +1943,7 @@ void app_main(void)
     start_webserver();
 
     // 启动WebSocket状态更新任务
-    xTaskCreate(websocket_task, "websocket_task", 8192, NULL, 5, &websocket_task_handle);
+    xTaskCreate(websocket_task, "websocket_task", 1024*10, NULL, 5, &websocket_task_handle);
 
     tinyusb_hid_init();
     // tinyusb_cdc_init(NULL, NULL);
@@ -1901,9 +1961,20 @@ void app_main(void)
         ESP_LOGW(TAG, "DualKey配置加载失败: %s，使用默认配置", esp_err_to_name(dualkey_ret));
     }
 
+    static uint8_t last_battery_percentage = 255;
     while (1) {
         if (g_device_status.bluetooth_connected) {
-            ble_hid_set_battery(g_battery_percentage);
+            // 只在电量变化时发送，减少蓝牙通信负担
+            if (last_battery_percentage != g_battery_percentage) {
+                esp_err_t ret = ble_hid_set_battery(g_battery_percentage);
+                if (ret == ESP_OK) {
+                    last_battery_percentage = g_battery_percentage;
+                    ESP_LOGI(TAG, "BLE battery updated: %d%%", g_battery_percentage);
+                }
+            }
+        } else {
+            // 连接断开时重置，确保下次连接会发送电量
+            last_battery_percentage = 255;
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

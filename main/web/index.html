@@ -98,6 +98,14 @@
                                     <span class="label" data-i18n="usbVoltage">USB电压:</span>
                                     <span class="value" id="usbVoltage">5.0V</span>
                                 </div>
+                                <div class="voltage-item">
+                                    <span class="label" data-i18n="switch1Value">拨码开关1值:</span>
+                                    <span class="value" id="switch1Value">0mV</span>
+                                </div>
+                                <div class="voltage-item">
+                                    <span class="label" data-i18n="switch2Value">拨码开关2值:</span>
+                                    <span class="value" id="switch2Value">0mV</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -128,18 +136,19 @@
                                 <option value="1" data-i18n="copyPasteCmd">复制粘贴 (Cmd+C/V)</option>
                                 <option value="2" data-i18n="undoRedo">撤销重做 (Ctrl+Z/Y)</option>
                                 <option value="3" data-i18n="undoRedoCmd">撤销重做 (Cmd+Z/Y)</option>
-                                <option value="4" data-i18n="undoRedoCmdShift">撤销重做 (Cmd+Z/Cmd+Shift+Z)</option>
-                                <option value="5" data-i18n="tabPage">标签页 (Ctrl+Tab/Ctrl+Shift+Tab)</option>
-                                <option value="6" data-i18n="windowSwitch">窗口切换 (Alt/Cmd+Tab)</option>
-                                <option value="7" data-i18n="zoom">缩放 (Ctrl+Plus/Minus)</option>
-                                <option value="8" data-i18n="zoomCmd">缩放 (Cmd+Plus/Minus)</option>
-                                <option value="9" selected data-i18n="pageUpDown">翻页 (Page Up/Down)</option>
-                                <option value="10" data-i18n="volumeControl">音量控制 (Vol+/-)</option>
-                                <option value="11" data-i18n="mediaControl">媒体控制 (Prev/Next)</option>
-                                <option value="12" data-i18n="mediaControlPlayPause">媒体控制 (PlayPause/Stop)</option>
-                                <option value="13" data-i18n="homeEnd">HOME按键 (Home/End)</option>
-                                <option value="14" data-i18n="upDown">方向键 (Up/Down)</option>
-                                <option value="15" data-i18n="leftRight">方向键 (Left/Right)</option>
+                                <option value="4" data-i18n="undoRedoCmdShift">撤销重做 (Cmd+Z / Cmd+Shift+Z)</option>
+                                <option value="5" data-i18n="tabSwitch">标签页 (Ctrl+Tab / Ctrl+Shift+Tab)</option>
+                                <option value="6" data-i18n="windowSwitch">窗口切换 (Alt/Tab)</option>
+                                <option value="7" data-i18n="windowSwitchCmd">窗口切换 (Cmd/Tab)</option>
+                                <option value="8" data-i18n="zoom">缩放 (Ctrl+Plus/Minus)</option>
+                                <option value="9" data-i18n="zoomCmd">缩放 (Cmd+Plus/Minus)</option>
+                                <option value="10" selected data-i18n="pageUpDown">翻页 (Page Up/Down)</option>
+                                <option value="11" data-i18n="volumeControl">音量控制 (Vol+/-)</option>
+                                <option value="12" data-i18n="mediaControl">媒体控制 (Prev/Next)</option>
+                                <option value="13" data-i18n="mediaControlPlayPause">媒体控制 (PlayPause/Stop)</option>
+                                <option value="14" data-i18n="homeEnd">HOME按键 (Home/End)</option>
+                                <option value="15" data-i18n="upDown">方向键 (Up/Down)</option>
+                                <option value="16" data-i18n="leftRight">方向键 (Left/Right)</option>
                             </select>
                             <button class="btn btn-secondary" id="applyMappingBtn" data-i18n="apply">应用</button>
                         </div>

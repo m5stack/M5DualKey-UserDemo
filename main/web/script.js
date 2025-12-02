@@ -25,6 +25,8 @@ class LanguageManager {
                 batteryStatus: '电量状态',
                 batteryVoltage: '电池电压:',
                 usbVoltage: 'USB电压:',
+                switch1Value: '拨码开关1值:',
+                switch2Value: '拨码开关2值:',
                 charging: '充电中',
                 fullyCharged: '已充满',
                 notCharging: '未充电',
@@ -70,10 +72,10 @@ class LanguageManager {
                 copyPasteCmd: '复制粘贴 (Cmd+C/V)',
                 undoRedo: '撤销重做 (Ctrl+Z/Y)',
                 undoRedoCmd: '撤销重做 (Cmd+Z/Y)',
-                undoRedoCmdShift: '撤销重做 (Cmd+Z/Cmd+Shift+Z)',
-                tabPage: '标签页 (Ctrl+Tab/Ctrl+Shift+Tab)',
-                tabPageCmd: '标签页 (Cmd+Tab/Cmd+Shift+Tab)',
-                windowSwitch: '窗口切换 (Alt/Cmd+Tab)',
+                undoRedoCmdShift: '撤销重做 (Cmd+Z / Cmd+Shift+Z)',
+                tabSwitch: '标签页 (Ctrl+Tab / Ctrl+Shift+Tab)',
+                windowSwitch: '窗口切换 (Alt/Tab)',
+                windowSwitchCmd: '窗口切换 (Cmd/Tab)',
                 zoom: '缩放 (Ctrl+Plus/Minus)',
                 zoomCmd: '缩放 (Cmd+Plus/Minus)',
                 pageUpDown: '翻页 (Page Up/Down)',
@@ -212,6 +214,8 @@ class LanguageManager {
                 batteryVoltage: 'Battery Voltage:',
                 usbVoltage: 'USB Voltage:',
                 charging: 'Charging',
+                switch1Value: 'Switch 1 Value:',
+                switch2Value: 'Switch 2 Value:',
                 fullyCharged: 'Fully Charged',
                 notCharging: 'Not Charging',
                 hidDeviceStatus: 'HID Device Status',
@@ -256,10 +260,10 @@ class LanguageManager {
                 copyPasteCmd: 'Copy Paste (Cmd+C/V)',
                 undoRedo: 'Undo Redo (Ctrl+Z/Y)',
                 undoRedoCmd: 'Undo Redo (Cmd+Z/Y)',
-                undoRedoCmdShift: 'Undo Redo (Cmd+Z/Cmd+Shift+Z)',
-                tabPage: 'Tab Page (Ctrl+Tab/Ctrl+Shift+Tab)',
-                tabPageCmd: 'Tab Page (Cmd+Tab/Cmd+Shift+Tab)',
-                windowSwitch: 'Window Switch (Alt/Cmd+Tab)',
+                undoRedoCmdShift: 'Undo Redo (Cmd+Z / Cmd+Shift+Z)',
+                tabSwitch: 'Tab Switch (Ctrl+Tab / Ctrl+Shift+Tab)',
+                windowSwitchCmd: 'Window Switch (Cmd/Tab)',
+                windowSwitch: 'Window Switch (Alt/Tab)',
                 zoom: 'Zoom (Ctrl+Plus/Minus)',
                 zoomCmd: 'Zoom (Cmd+Plus/Minus)',
                 pageUpDown: 'Page Up/Down',
@@ -775,11 +779,11 @@ class DualKeyController {
             return;
         }
     
-        console.log(`增量更新${busName} Bus设备列表，收到设备数量:`, devices.length);
+        // console.log(`增量更新${busName} Bus设备列表，收到设备数量:`, devices.length);
     
         // 如果没有收到任何设备数据，不做任何改动（保持现有显示）
         if (!devices || devices.length === 0) {
-            console.log(`${busName} Bus本次没有设备更新，保持现有显示`);
+            // console.log(`${busName} Bus本次没有设备更新，保持现有显示`);
             return;
         }
     
@@ -1835,12 +1839,15 @@ class DualKeyController {
             rightKey: false,
             leftKeyColor: 0x000000,  // 红色
             rightKeyColor: 0x000000, // 绿色
+            usbVoltage: 0.0,
             usbConnected: true,
             usbMode: 0, // 0:HID, 1:BLE, 2:CDC
             batteryVoltage: 3.7,
             batteryPercentage: 75,
             charge_status: 0, // 0:未充电, 1:充电中, 2:充满
             dipSwitch: 0, // 0:center, 1:left, 2:right
+            switch1Value: 0,
+            switch2Value: 0,
             // 蓝牙状态
             bluetoothConnected: false,
             bluetoothDeviceName: "Chain DualKey",
@@ -1960,12 +1967,15 @@ class DualKeyController {
                 this.dualkeyState.rightKey = data.dualkey.right_key_pressed || false;
                 this.dualkeyState.leftKeyColor = data.dualkey.left_key_color || 0x000000;
                 this.dualkeyState.rightKeyColor = data.dualkey.right_key_color || 0x000000;
+                this.dualkeyState.usbVoltage = data.dualkey.usb_voltage || 0.0;
                 this.dualkeyState.usbConnected = data.dualkey.usb_connected || false;
                 this.dualkeyState.usbMode = data.dualkey.usb_mode || 0;
                 this.dualkeyState.batteryVoltage = data.dualkey.battery_voltage || 0;
                 this.dualkeyState.batteryPercentage = data.dualkey.battery_percentage || 0;
                 this.dualkeyState.charge_status = data.dualkey.charge_status || 0;
                 this.dualkeyState.dipSwitch = data.dualkey.dip_switch_pos || 0;
+                this.dualkeyState.switch1Value = data.dualkey.switch_1_value || 0;
+                this.dualkeyState.switch2Value = data.dualkey.switch_2_value || 0;
                 
                 // 更新蓝牙状态
                 this.dualkeyState.bluetoothConnected = data.dualkey.bluetooth_connected || false;
@@ -2860,20 +2870,21 @@ class DualKeyController {
             { index: 2, name: languageManager.getText('undoRedo')},
             { index: 3, name: languageManager.getText('undoRedoCmd')},
             { index: 4, name: languageManager.getText('undoRedoCmdShift')},
-            { index: 5, name: languageManager.getText('tabPage')},
+            { index: 5, name: languageManager.getText('tabSwitch')},
             { index: 6, name: languageManager.getText('windowSwitch')},
-            { index: 7, name: languageManager.getText('zoom')},
-            { index: 8, name: languageManager.getText('zoomCmd')},
-            { index: 9, name: languageManager.getText('pageUpDown')},
-            { index: 10, name: languageManager.getText('volumeControl')},
-            { index: 11, name: languageManager.getText('mediaControl')},
-            { index: 12, name: languageManager.getText('mediaControlPlayPause')},
-            { index: 13, name: languageManager.getText('homeEnd')},
-            { index: 14, name: languageManager.getText('upDown')},
-            { index: 15, name: languageManager.getText('leftRight')},
+            { index: 7, name: languageManager.getText('windowSwitchCmd')},
+            { index: 8, name: languageManager.getText('zoom')},
+            { index: 9, name: languageManager.getText('zoomCmd')},
+            { index: 10, name: languageManager.getText('pageUpDown')},
+            { index: 11, name: languageManager.getText('volumeControl')},
+            { index: 12, name: languageManager.getText('mediaControl')},
+            { index: 13, name: languageManager.getText('mediaControlPlayPause')},
+            { index: 14, name: languageManager.getText('homeEnd')},
+            { index: 15, name: languageManager.getText('upDown')},
+            { index: 16, name: languageManager.getText('leftRight')},
         ];
 
-        const currentConfig = mappingConfigs[this.dualkeyState.currentKeyMapping] || mappingConfigs[9];
+        const currentConfig = mappingConfigs[this.dualkeyState.currentKeyMapping] || mappingConfigs[10];
 
         // 更新映射名称
         if (currentMappingName) {
@@ -2925,18 +2936,23 @@ class DualKeyController {
         // 更新电压显示
         const batteryVoltageElement = document.getElementById('batteryVoltage');
         const usbVoltageElement = document.getElementById('usbVoltage');
+        const switch1ValueElement = document.getElementById('switch1Value');
+        const switch2ValueElement = document.getElementById('switch2Value');
         
         if (batteryVoltageElement) {
             batteryVoltageElement.textContent = `${this.dualkeyState.batteryVoltage.toFixed(2)}V`;
         }
         
         if (usbVoltageElement) {
-            // 根据USB连接状态显示电压
-            if (this.dualkeyState.usbConnected) {
-                usbVoltageElement.textContent = '5.0V';
-            } else {
-                usbVoltageElement.textContent = '0.0V';
-            }
+            usbVoltageElement.textContent = `${this.dualkeyState.usbVoltage.toFixed(2)}V`;
+        }
+
+        if (switch1ValueElement) {
+            switch1ValueElement.textContent = `${this.dualkeyState.switch1Value}mV`;
+        }
+
+        if (switch2ValueElement) {
+            switch2ValueElement.textContent = `${this.dualkeyState.switch2Value}mV`;
         }
         
         // 根据电压调整电池颜色

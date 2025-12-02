@@ -16,6 +16,7 @@
 #include "esp_hidd.h"
 #include "ble_hid.h"
 #include "esp_mac.h"
+#include "freertos/task.h"
 
 extern uint8_t g_connect_status;
 
@@ -77,6 +78,14 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
             g_connect_status             = 2;  // 连接建立
 
             ESP_LOGI(TAG, "CONNECT");
+            
+            // 连接建立后，等待50ms让蓝牙协议栈稳定，然后发送初始电量
+            extern uint8_t g_battery_percentage;
+            vTaskDelay(pdMS_TO_TICKS(50));
+            if (s_ble_hid_param.hid_dev != NULL) {
+                esp_hidd_dev_battery_set(s_ble_hid_param.hid_dev, g_battery_percentage);
+                ESP_LOGI(TAG, "Initial battery level sent: %d%%", g_battery_percentage);
+            }
             break;
         }
         case ESP_HIDD_PROTOCOL_MODE_EVENT: {
@@ -162,7 +171,7 @@ esp_err_t ble_hid_deinit(void)
 void ble_hid_keyboard_report(hid_report_t report)
 {
     static bool use_full_key = false;
-    if (s_ble_hid_param.is_connected == false) {
+    if (s_ble_hid_param.is_connected == false || s_ble_hid_param.hid_dev == NULL) {
         return;
     }
 
@@ -200,11 +209,10 @@ void ble_hid_keyboard_report(hid_report_t report)
 
 esp_err_t ble_hid_set_battery(uint8_t level)
 {
-    if (s_ble_hid_param.hid_dev == NULL) {
+    if (s_ble_hid_param.hid_dev == NULL || !s_ble_hid_param.is_connected) {
         return ESP_FAIL;
     }
 
-    // 调用ESP-IDF的电量设置API
     return esp_hidd_dev_battery_set(s_ble_hid_param.hid_dev, level);
 }
 

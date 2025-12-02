@@ -56,7 +56,7 @@ static uint32_t calculate_config_crc(const chain_device_saved_config_t* config)
 
 // 保存设备配置到NVS
 esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_type,
-                                const chain_device_hid_config_t* hid_config)
+                                const chain_device_hid_config_t* hid_config, uint32_t rgb_color)
 {
     if (!config_initialized) {
         ESP_LOGE(TAG, "配置系统未初始化");
@@ -72,6 +72,7 @@ esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_t
     memcpy(saved_config.uid, uid, CHAIN_UID_SIZE);
     saved_config.device_type = device_type;
     memcpy(&saved_config.hid_config, hid_config, sizeof(chain_device_hid_config_t));
+    saved_config.rgb_color = rgb_color;
     saved_config.crc32 = calculate_config_crc(&saved_config);
 
     char nvs_key[16];
@@ -98,14 +99,14 @@ esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_t
 
 // 从NVS加载设备配置
 esp_err_t chain_bus_config_load(const uint8_t* uid, chain_device_type_t device_type,
-                                chain_device_hid_config_t* hid_config)
+                                chain_device_hid_config_t* hid_config, uint32_t* rgb_color)
 {
     if (!config_initialized) {
         ESP_LOGE(TAG, "配置系统未初始化");
         return ESP_ERR_INVALID_STATE;
     }
 
-    if (!uid || !hid_config) {
+    if (!uid || !hid_config || !rgb_color) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -144,6 +145,7 @@ esp_err_t chain_bus_config_load(const uint8_t* uid, chain_device_type_t device_t
     }
 
     memcpy(hid_config, &saved_config.hid_config, sizeof(chain_device_hid_config_t));
+    *rgb_color = saved_config.rgb_color;
 
     char uid_str[25];
     chain_bus_uid_to_string(uid, uid_str);

@@ -34,6 +34,7 @@ void update_power_status(led_strip_handle_t led_strip);
 extern float g_battery_voltage;
 extern int g_charging_status;
 extern int g_battery_percentage;
+extern float g_usb_voltage;
 extern bool g_usb_connected;
 
 #ifdef __cplusplus

@@ -172,8 +172,10 @@ static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
             ESP_LOGV(TAG, "BLE GAP ADV_START_COMPLETE");
             if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS) {
                 ESP_LOGI(TAG, "BLE advertising started successfully");
-                // 广播开始时，连接状态重置为未连接
-                g_connect_status = 0;
+                // 仅在未连接状态下重置连接状态
+                if (g_connect_status != 2) {
+                    g_connect_status = 0;
+                }
             } else {
                 ESP_LOGE(TAG, "BLE advertising start failed: %d", param->adv_start_cmpl.status);
             }
@@ -245,12 +247,10 @@ static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
                      param->phy_update.rx_phy);
             break;
         case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-            ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d", param->update_conn_params.min_int,
-                     param->update_conn_params.max_int);
-            // 连接参数更新通常表示连接已建立
-            if (g_connect_status == 0) {
-                g_connect_status = 1;  // 连接中
-            }
+            ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d status:%d", 
+                     param->update_conn_params.min_int,
+                     param->update_conn_params.max_int,
+                     param->update_conn_params.status);
             break;
         default:
             ESP_LOGI(TAG, "BLE GAP EVENT %d", event);

@@ -17,6 +17,7 @@ typedef struct {
     uint8_t uid[CHAIN_UID_SIZE];           // 设备UID
     chain_device_type_t device_type;       // 设备类型
     chain_device_hid_config_t hid_config;  // HID配置
+    uint32_t rgb_color;                    // RGB颜色
     uint32_t crc32;                        // CRC32校验
 } chain_device_saved_config_t;
 
@@ -31,20 +32,22 @@ esp_err_t chain_bus_config_init(void);
  * @param uid 设备UID
  * @param device_type 设备类型
  * @param hid_config HID配置
+ * @param rgb_color RGB颜色
  * @return esp_err_t ESP_OK 成功
  */
 esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_type,
-                                const chain_device_hid_config_t* hid_config);
+                                const chain_device_hid_config_t* hid_config, uint32_t rgb_color);
 
 /**
  * @brief 从NVS加载设备配置
  * @param uid 设备UID
  * @param device_type 设备类型（用于验证）
  * @param hid_config 返回的HID配置
+ * @param rgb_color 返回的RGB颜色
  * @return esp_err_t ESP_OK 成功，ESP_ERR_NOT_FOUND 未找到配置
  */
 esp_err_t chain_bus_config_load(const uint8_t* uid, chain_device_type_t device_type,
-                                chain_device_hid_config_t* hid_config);
+                                chain_device_hid_config_t* hid_config, uint32_t* rgb_color);
 
 /**
  * @brief 删除设备配置

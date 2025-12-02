@@ -36,36 +36,39 @@ static uint16_t keymaps[][1][KBD_COL_NUM] = {
         {LCMD(HID_KEY_Z), LSG(HID_KEY_Z)},
     },
     [5] = {
-        {RCS(KC_TAB),  LCTL(KC_TAB)},
+        {LCTL(KC_TAB),  LCS(KC_TAB)},
     },
     [6] = {
-        {LOPT(KC_TAB), LCMD(KC_TAB)},
+        {QK_LALT, KC_TAB},
     },
     [7] = {
-        {LCTL(KC_KP_MINUS),  LCTL(KC_KP_PLUS)},
+        {QK_LGUI, KC_TAB},
     },
     [8] = {
-        {LCMD(KC_KP_MINUS), LCMD(KC_KP_PLUS)},
+        {LCTL(KC_KP_MINUS),  LCTL(KC_KP_PLUS)},
     },
     [9] = {
-        {KC_PAGE_UP, KC_PAGE_DOWN},
+        {LCMD(KC_KP_MINUS), LCMD(KC_KP_PLUS)},
     },
     [10] = {
-        {KC_KB_VOLUME_UP, KC_KB_VOLUME_DOWN},
+        {KC_PAGE_UP, KC_PAGE_DOWN},
     },
     [11] = {
-        {KC_MEDIA_PREV_TRACK, KC_MEDIA_NEXT_TRACK},
+        {KC_KB_VOLUME_UP, KC_KB_VOLUME_DOWN},
     },
     [12] = {
-        {KC_MEDIA_PLAY_PAUSE, KC_MEDIA_STOP},
+        {KC_MEDIA_PREV_TRACK, KC_MEDIA_NEXT_TRACK},
     },
     [13] = {
-        {KC_HOME, KC_END},
+        {KC_MEDIA_PLAY_PAUSE, KC_MEDIA_STOP},
     },
     [14] = {
-        {KC_UP, KC_DOWN},
+        {KC_HOME, KC_END},
     },
     [15] = {
+        {KC_UP, KC_DOWN},
+    },
+    [16] = {
         {KC_LEFT, KC_RIGHT},
     },
 };
