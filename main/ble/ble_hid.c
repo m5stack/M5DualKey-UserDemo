@@ -78,7 +78,7 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
             g_connect_status             = 2;  // 连接建立
 
             ESP_LOGI(TAG, "CONNECT");
-            
+
             // 连接建立后，等待50ms让蓝牙协议栈稳定，然后发送初始电量
             extern uint8_t g_battery_percentage;
             vTaskDelay(pdMS_TO_TICKS(50));

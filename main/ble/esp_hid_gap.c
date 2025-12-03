@@ -247,10 +247,8 @@ static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
                      param->phy_update.rx_phy);
             break;
         case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-            ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d status:%d", 
-                     param->update_conn_params.min_int,
-                     param->update_conn_params.max_int,
-                     param->update_conn_params.status);
+            ESP_LOGI(TAG, "BLE GAP UPDATE_CONN_PARAMS  min:%d max: %d status:%d", param->update_conn_params.min_int,
+                     param->update_conn_params.max_int, param->update_conn_params.status);
             break;
         default:
             ESP_LOGI(TAG, "BLE GAP EVENT %d", event);

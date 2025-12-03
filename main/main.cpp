@@ -339,11 +339,11 @@ static esp_err_t index_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve index.html");
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-#if enable_web_cache
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
-#else
+    // #if enable_web_cache
+    //     httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+    // #else
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-#endif
+    // #endif
     httpd_resp_send(req, index_html_start, index_len);
     return ESP_OK;
 }
@@ -355,11 +355,11 @@ static esp_err_t styles_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve styles.css");
     httpd_resp_set_type(req, "text/css; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-#if enable_web_cache
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
-#else
+    // #if enable_web_cache
+    //     httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+    // #else
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-#endif
+    // #endif
     httpd_resp_send(req, styles_css_start, styles_len);
     return ESP_OK;
 }
@@ -371,11 +371,11 @@ static esp_err_t script_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Serve script.js");
     httpd_resp_set_type(req, "application/javascript; charset=utf-8");
     httpd_resp_set_hdr(req, "X-Content-Type-Options", "nosniff");
-#if enable_web_cache
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
-#else
+    // #if enable_web_cache
+    //     httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
+    // #else
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-#endif
+    // #endif
     httpd_resp_send(req, script_js_start, script_len);
     return ESP_OK;
 }
@@ -1533,7 +1533,8 @@ void adc_switch_task(void *pvParameters)
             switch_pos = 0;
         }
 
-        // ESP_LOGI(TAG, "adc_value[0]: %d, adc_value[1]: %d", g_device_status.switch_1_value, g_device_status.switch_2_value);
+        // ESP_LOGI(TAG, "adc_value[0]: %d, adc_value[1]: %d", g_device_status.switch_1_value,
+        // g_device_status.switch_2_value);
 
         if (report_type != sys_param->report_type) {
             sys_param->report_type = report_type;
@@ -1943,7 +1944,7 @@ void app_main(void)
     start_webserver();
 
     // 启动WebSocket状态更新任务
-    xTaskCreate(websocket_task, "websocket_task", 1024*10, NULL, 5, &websocket_task_handle);
+    xTaskCreate(websocket_task, "websocket_task", 1024 * 10, NULL, 5, &websocket_task_handle);
 
     tinyusb_hid_init();
     // tinyusb_cdc_init(NULL, NULL);

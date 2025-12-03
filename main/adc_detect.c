@@ -323,29 +323,28 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
 static int calculate_smooth_percentage(float voltage, bool is_charging)
 {
     // 定义查找表结构
-    typedef struct { float v; int p; } point_t;
-    
+    typedef struct {
+        float v;
+        int p;
+    } point_t;
+
     // 充电曲线表 (电压从小到大)
-    const point_t chrg_table[] = {
-        {3.40f, 0}, {3.61f, 25}, {3.88f, 50}, {4.12f, 75}, {4.20f, 100}
-    };
+    const point_t chrg_table[] = {{3.40f, 0}, {3.61f, 25}, {3.88f, 50}, {4.12f, 75}, {4.20f, 100}};
     // 放电曲线表 (电压从小到大)
-    const point_t dischrg_table[] = {
-        {3.33f, 0}, {3.55f, 25}, {3.81f, 50}, {4.07f, 75}, {4.20f, 100}
-    };
+    const point_t dischrg_table[] = {{3.33f, 0}, {3.55f, 25}, {3.81f, 50}, {4.07f, 75}, {4.20f, 100}};
 
     const point_t *table = is_charging ? chrg_table : dischrg_table;
-    int count = 5;
+    int count            = 5;
 
     if (voltage <= table[0].v) return 0;
-    if (voltage >= table[count-1].v) return 100;
+    if (voltage >= table[count - 1].v) return 100;
 
     // 线性插值
     for (int i = 0; i < count - 1; i++) {
-        if (voltage >= table[i].v && voltage < table[i+1].v) {
-            float range_v = table[i+1].v - table[i].v;
-            float range_p = table[i+1].p - table[i].p;
-            float offset = voltage - table[i].v;
+        if (voltage >= table[i].v && voltage < table[i + 1].v) {
+            float range_v = table[i + 1].v - table[i].v;
+            float range_p = table[i + 1].p - table[i].p;
+            float offset  = voltage - table[i].v;
             return (int)(table[i].p + (offset / range_v) * range_p);
         }
     }
@@ -355,16 +354,16 @@ static int calculate_smooth_percentage(float voltage, bool is_charging)
 void update_power_status(led_strip_handle_t led_strip)
 {
     adc_result_t result = perform_adc_detection();
-    
+
     // 更新全局变量
     g_battery_voltage = result.battery_voltage;
-    
+
     // 判定充电状态: 0=未充电, 1=充电中, 2=充满
-    g_charging_status = (strcmp(result.charge_status, "Charging") == 0) ? 1
+    g_charging_status = (strcmp(result.charge_status, "Charging") == 0)        ? 1
                         : (strcmp(result.charge_status, "Fully Charged") == 0) ? 2
-                        : 0;
-    g_usb_voltage = result.vbus_voltage;
-    
+                                                                               : 0;
+    g_usb_voltage     = result.vbus_voltage;
+
     g_usb_connected = result.usb_connected;
 
     // --- 优化后的电量计算逻辑开始 ---
@@ -373,8 +372,8 @@ void update_power_status(led_strip_handle_t led_strip)
         g_battery_percentage = 100;
     } else {
         // 根据充电/放电状态选择不同的曲线
-        bool is_charging_curve = (g_charging_status == 1); 
-        g_battery_percentage = calculate_smooth_percentage(g_battery_voltage, is_charging_curve);
+        bool is_charging_curve = (g_charging_status == 1);
+        g_battery_percentage   = calculate_smooth_percentage(g_battery_voltage, is_charging_curve);
     }
     // --- 优化后的电量计算逻辑结束 ---
 
@@ -386,9 +385,7 @@ void update_power_status(led_strip_handle_t led_strip)
     if (led_strip != NULL) {
         // 打印检测结果，增加百分比显示
         ESP_LOGI(TAG, "=== ADC Detection Results ===");
-        ESP_LOGI(TAG, "Battery: %.2fV [%d%%] %s", 
-                 result.battery_voltage, 
-                 g_battery_percentage,
+        ESP_LOGI(TAG, "Battery: %.2fV [%d%%] %s", result.battery_voltage, g_battery_percentage,
                  result.battery_low ? "(LOW!)" : "(OK)");
         ESP_LOGI(TAG, "USB Voltage: %.2fV %s", result.vbus_voltage,
                  result.usb_connected ? "(Connected)" : "(Disconnected)");

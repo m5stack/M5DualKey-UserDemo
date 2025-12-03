@@ -73,7 +73,7 @@ esp_err_t chain_bus_config_save(const uint8_t* uid, chain_device_type_t device_t
     saved_config.device_type = device_type;
     memcpy(&saved_config.hid_config, hid_config, sizeof(chain_device_hid_config_t));
     saved_config.rgb_color = rgb_color;
-    saved_config.crc32 = calculate_config_crc(&saved_config);
+    saved_config.crc32     = calculate_config_crc(&saved_config);
 
     char nvs_key[16];
     generate_nvs_key(uid, nvs_key);
