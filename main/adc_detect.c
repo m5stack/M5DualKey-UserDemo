@@ -273,10 +273,10 @@ void test_adc_detection(led_strip_handle_t led_strip, adc_oneshot_unit_handle_t 
     // 显示测试开始状态 - 白色闪烁
     for (int i = 0; i < 3; i++) {
         safe_led_set_and_refresh(led_strip, 0, 255, 255, 255, 0);
-        safe_led_set_and_refresh(led_strip, 1, 255, 255, 255, 0);
+        safe_led_set_and_refresh(led_strip, 1, 0, 0, 0, 0);
         vTaskDelay(pdMS_TO_TICKS(200));
         safe_led_set_and_refresh(led_strip, 0, 0, 0, 0, 0);
-        safe_led_set_and_refresh(led_strip, 1, 0, 0, 0, 0);
+        safe_led_set_and_refresh(led_strip, 1, 255, 255, 255, 0);
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 

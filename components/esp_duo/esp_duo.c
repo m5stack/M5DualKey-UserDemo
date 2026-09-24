@@ -60,24 +60,22 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
     };
     gpio_config(&io_conf);
 
-    /* LED strip initialization with the GPIO and pixels number*/
+    /* led_strip 2.5.5 RMT, LED_MODEL_WS2812 @ 10MHz:
+     * T0H 300ns, T0L 900ns, T1H 900ns, T1L 300ns, reset 280us. */
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LIGHTMAP_GPIO, // The GPIO that connected to the LED strip's data line
-        .max_leds = LIGHTMAP_NUM, // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812, // LED strip model
-        .flags.invert_out = false, // whether to invert the output signal (useful when your hardware has a level inverter)
+        .strip_gpio_num   = LIGHTMAP_GPIO,
+        .max_leds         = LIGHTMAP_NUM,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB,
+        .led_model        = LED_MODEL_WS2812,
+        .flags.invert_out = false,
     };
-
-    // LED strip backend configuration: SPI
-    led_strip_spi_config_t spi_config = {
-        .clk_src = SPI_CLK_SRC_XTAL, // different clock source can lead to different power consumption
-        .flags.with_dma = true,         // Using DMA can improve performance and help drive more LEDs
-        .spi_bus = SPI2_HOST,           // SPI bus ID
+    led_strip_rmt_config_t rmt_config = {
+        .clk_src           = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz     = 10 * 1000 * 1000,
+        .mem_block_symbols = 64,
+        .flags.with_dma    = false,
     };
-
-    // LED Strip object handle
-    ESP_ERROR_CHECK(led_strip_new_spi_device(&strip_config, &spi_config, &s_led_strip));
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &s_led_strip));
 
     if (led_strip) {
         *led_strip = s_led_strip;

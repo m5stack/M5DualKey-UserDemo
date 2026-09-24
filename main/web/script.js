@@ -7,7 +7,7 @@ class LanguageManager {
         this.currentLanguage = localStorage.getItem('language') || 'zh';
         this.translations = {
             zh: {
-                title: 'DualKey 控制面板 v0.7-hotfix',
+                title: 'DualKey 控制面板 v0.8',
                 connectionStatus: '连接状态:',
                 lastUpdate: '最后更新:',
                 online: '在线',
@@ -277,7 +277,7 @@ class LanguageManager {
                 pairingTip: '目前仅支持旧主机删除连接后才能与新设备配对',
             },
             en: {
-                title: 'DualKey Control Panel v0.7-hotfix',
+                title: 'DualKey Control Panel v0.8',
                 connectionStatus: 'Connection Status:',
                 lastUpdate: 'Last Update:',
                 online: 'Online',
